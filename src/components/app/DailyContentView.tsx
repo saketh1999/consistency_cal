@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import type { DailyData, TodoItem } from '@/lib/types';
 import YoutubeEmbed from './YoutubeEmbed';
 import { format } from 'date-fns';
-import { ImageIcon, VideoIcon, NotebookTextIcon, ListChecksIcon, AlertTriangleIcon, Trash2Icon, PlusCircleIcon, XCircleIcon, UploadCloudIcon } from 'lucide-react';
+import { ImageIcon, VideoIcon, NotebookTextIcon, ListChecksIcon, AlertTriangleIcon, Trash2Icon, PlusCircleIcon, XCircleIcon, UploadCloudIcon, Loader2 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -34,6 +34,7 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [isProcessingImages, setIsProcessingImages] = useState(false); // New state for image processing
 
   const extractYoutubeEmbedId = (url: string): string | null => {
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
@@ -48,7 +49,6 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
     if (Array.isArray(loadedImageUrls)) {
       setImageUrls(loadedImageUrls);
     } else if (typeof loadedImageUrls === 'string' && loadedImageUrls.startsWith('data:image')) {
-      // Handle case where it might have been a single string URI from a previous version
       setImageUrls([loadedImageUrls]);
     } else {
       setImageUrls([]);
@@ -59,6 +59,7 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
     setTodos(data?.todos || []);
     setImportantEvents(data?.importantEvents || '');
     setNewTodoText('');
+    setIsProcessingImages(false); // Reset processing state when data changes
   }, [data, selectedDate]);
 
   const processImageFile = useCallback((file: File) => {
@@ -70,13 +71,18 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
           variant: "destructive",
         });
         if (fileInputRef.current) {
-          fileInputRef.current.value = ""; // Clear the file input if the file is too large
+          fileInputRef.current.value = "";
         }
         return;
       }
+      setIsProcessingImages(true); // Start processing
       const reader = new FileReader();
       reader.onloadend = () => {
         setImageUrls(prevUrls => [...prevUrls, reader.result as string]);
+        setIsProcessingImages(false); // End processing
+        if (fileInputRef.current) { // Clear file input after successful processing
+            fileInputRef.current.value = "";
+        }
       };
       reader.onerror = () => {
         toast({
@@ -84,10 +90,11 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
           description: "Could not read the selected image. Please try again.",
           variant: "destructive",
         });
+        setIsProcessingImages(false); // End processing on error
       };
       reader.readAsDataURL(file);
     }
-  }, [toast, setImageUrls]); // Added setImageUrls to dependency array
+  }, [toast, setImageUrls]);
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -98,7 +105,7 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
 
   const handleRemoveImage = (indexToRemove: number) => {
     setImageUrls(prevUrls => prevUrls.filter((_, index) => index !== indexToRemove));
-    if (fileInputRef.current && imageUrls.length -1 === 0) { // if it was the last image
+    if (fileInputRef.current && imageUrls.length -1 === 0) {
         fileInputRef.current.value = "";
     }
     toast({ title: "Image Removed", description: "The image has been cleared. Save to confirm." });
@@ -152,7 +159,6 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
     }
   };
 
-  // Drag and Drop handlers
   const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
@@ -162,7 +168,6 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
   const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    // Only set to false if not dragging over a child element
     if (e.currentTarget.contains(e.relatedTarget as Node)) {
       return;
     }
@@ -172,7 +177,7 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsDraggingOver(true); // Ensure it stays true while hovering
+    setIsDraggingOver(true);
   };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -229,7 +234,7 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
           />
         </div>
 
-        {/* Image Upload Section - Updated for multiple images */}
+        {/* Image Upload Section */}
         <div className="space-y-2">
           <Label htmlFor="imageUploadTrigger" className="flex items-center gap-2 font-medium text-primary">
             <ImageIcon className="h-5 w-5" />
@@ -246,38 +251,46 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
             onDragOver={handleDragOver}
             onDrop={handleDrop}
             onClick={() => {
-              // Only trigger file input if clicking on the empty drop zone placeholder
-              if (imageUrls.length === 0 && fileInputRef.current) {
+              if (imageUrls.length === 0 && fileInputRef.current && !isProcessingImages) {
                 fileInputRef.current.click();
               }
             }}
           >
             {imageUrls.length === 0 && (
               <div className="flex flex-col items-center justify-center text-center pointer-events-none">
-                <UploadCloudIcon className={cn("h-12 w-12 mb-2", isDraggingOver ? "text-primary" : "text-muted-foreground/70")} />
-                <p className={cn("text-sm font-medium", isDraggingOver ? "text-primary" : "text-muted-foreground/90")}>
-                  {isDraggingOver ? "Drop image here" : "Drag & drop or click to upload"}
-                </p>
-                <p className="text-xs text-muted-foreground/70">Max 5MB per image</p>
+                 {isProcessingImages ? (
+                  <>
+                    <Loader2 className="h-12 w-12 mb-2 text-primary animate-spin" />
+                    <p className="text-sm font-medium text-primary">Processing...</p>
+                  </>
+                ) : (
+                  <>
+                    <UploadCloudIcon className={cn("h-12 w-12 mb-2", isDraggingOver ? "text-primary" : "text-muted-foreground/70")} />
+                    <p className={cn("text-sm font-medium", isDraggingOver ? "text-primary" : "text-muted-foreground/90")}>
+                      {isDraggingOver ? "Drop image here" : "Drag & drop or click to upload"}
+                    </p>
+                    <p className="text-xs text-muted-foreground/70">Max 5MB per image</p>
+                  </>
+                )}
               </div>
             )}
           </div>
-          {/* Hidden file input, id should match label's htmlFor if label is used for clicking */}
           <Input
-            id="imageUpload" // This ID is not directly used by a label for clicking now
+            id="imageUpload"
             type="file"
             accept="image/*"
             ref={fileInputRef}
             onChange={handleImageChange}
             className="sr-only"
-            onClick={(event) => { (event.target as HTMLInputElement).value = '' }} // Resets to allow re-uploading same file
+            onClick={(event) => { (event.target as HTMLInputElement).value = '' }}
+            disabled={isProcessingImages}
           />
-           {/* Button to trigger file input, shown below the drop zone */}
           <Button
-              id="imageUploadTrigger" // Label above points to this
+              id="imageUploadTrigger"
               variant="outline"
               className="w-full mt-2 border-primary text-primary hover:bg-primary/10"
               onClick={() => fileInputRef.current?.click()}
+              disabled={isProcessingImages}
             >
               <ImageIcon className="mr-2 h-4 w-4" /> Add Image
           </Button>
@@ -305,6 +318,7 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
                     onClick={() => handleRemoveImage(index)}
                     aria-label={`Remove image ${index + 1}`}
                     className="absolute top-1 right-1 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 hover:bg-destructive/80 border-destructive/50"
+                    disabled={isProcessingImages}
                   >
                     <XCircleIcon className="h-4 w-4" />
                   </Button>
@@ -313,7 +327,6 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
             </div>
           )}
         </div>
-
 
         {/* YouTube Video Section */}
         <div className="space-y-2">
@@ -424,8 +437,19 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
         </div>
       </CardContent>
       <CardFooter className="border-t border-border pt-4 md:pt-6">
-        <Button onClick={handleSave} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground">
-          Save Journal Entries
+        <Button
+          onClick={handleSave}
+          className="w-full bg-accent hover:bg-accent/90 text-accent-foreground"
+          disabled={isProcessingImages}
+        >
+          {isProcessingImages ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Processing Image...
+            </>
+          ) : (
+            "Save Journal Entries"
+          )}
         </Button>
       </CardFooter>
     </Card>

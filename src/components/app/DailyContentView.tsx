@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import type { DailyData, TodoItem } from '@/lib/types';
 import YoutubeEmbed from './YoutubeEmbed';
 import { format } from 'date-fns';
-import { ImageIcon, VideoIcon, NotebookTextIcon, ListChecksIcon, AlertTriangleIcon, Trash2Icon, PlusCircleIcon } from 'lucide-react';
+import { ImageIcon, VideoIcon, NotebookTextIcon, ListChecksIcon, AlertTriangleIcon, Trash2Icon, PlusCircleIcon, XCircleIcon } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 
@@ -24,7 +24,7 @@ interface DailyContentViewProps {
 
 const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDataChange }) => {
   const [notes, setNotes] = useState('');
-  const [imageDataUri, setImageDataUri] = useState<string | undefined>(undefined); // For uploaded image
+  const [imageDataUri, setImageDataUri] = useState<string | undefined>(undefined);
   const [videoUrl, setVideoUrl] = useState('');
   const [youtubeEmbedId, setYoutubeEmbedId] = useState<string | null>(null);
   const [todos, setTodos] = useState<TodoItem[]>([]);
@@ -35,7 +35,7 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
 
   useEffect(() => {
     setNotes(data?.notes || '');
-    setImageDataUri(data?.imageUrl || undefined); // imageUrl from data is now a data URI
+    setImageDataUri(data?.imageUrl || undefined);
     setVideoUrl(data?.videoUrl || '');
     setTodos(data?.todos || []);
     setImportantEvents(data?.importantEvents || '');
@@ -64,7 +64,7 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
           variant: "destructive",
         });
         if (fileInputRef.current) {
-          fileInputRef.current.value = ""; // Reset file input
+          fileInputRef.current.value = ""; 
         }
         return;
       }
@@ -81,6 +81,14 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleRemoveImage = () => {
+    setImageDataUri(undefined);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""; // Reset file input
+    }
+    toast({ title: "Image Removed", description: "The image has been cleared. Save to confirm." });
   };
 
   const handleAddTodo = () => {
@@ -134,7 +142,7 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
     <Card className="shadow-lg h-full flex flex-col">
       <CardHeader>
         <CardTitle className="text-xl font-semibold">Journal for {formattedDate}</CardTitle>
-        <CardDescription>Log your activities, meals, and thoughts for the day.</CardDescription>
+        <CardDescription>Log your activities, meals, and thoughts for the day. All fields are editable.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6 flex-grow overflow-y-auto p-4 md:p-6">
         {/* Notes Section */}
@@ -156,17 +164,24 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
         <div className="space-y-2">
           <Label htmlFor="imageUpload" className="flex items-center gap-2 font-medium">
             <ImageIcon className="h-5 w-5 text-primary" />
-            Upload Image
+            Image
           </Label>
-          <Input
-            id="imageUpload"
-            type="file"
-            accept="image/*"
-            ref={fileInputRef}
-            onChange={handleImageChange}
-            className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
-          />
-          {imageDataUri && (
+          <div className="flex items-center gap-2">
+            <Input
+              id="imageUpload"
+              type="file"
+              accept="image/*"
+              ref={fileInputRef}
+              onChange={handleImageChange}
+              className="flex-grow file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+            />
+            {imageDataUri && (
+              <Button variant="outline" size="icon" onClick={handleRemoveImage} aria-label="Remove image">
+                <XCircleIcon className="h-5 w-5 text-destructive" />
+              </Button>
+            )}
+          </div>
+          {imageDataUri ? (
             <div className="mt-2 overflow-hidden rounded-lg border shadow-sm">
               <Image
                 src={imageDataUri}
@@ -181,8 +196,7 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
                 }}
               />
             </div>
-          )}
-          {!imageDataUri && (
+          ) : (
              <div className="mt-2 overflow-hidden rounded-lg border shadow-sm flex items-center justify-center bg-muted/30 aspect-[3/2]">
                 <Image
                     src={`https://placehold.co/600x400.png`}
@@ -292,3 +306,5 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
 };
 
 export default DailyContentView;
+
+    

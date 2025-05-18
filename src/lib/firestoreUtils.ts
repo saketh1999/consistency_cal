@@ -1,4 +1,3 @@
-
 'use server';
 
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
@@ -14,7 +13,7 @@ import {
   updateDoc,
   deleteDoc,
 } from 'firebase/firestore';
-import type { AppData, DailyData, FitnessGoals, Layouts } from './types';
+import type { AppData, DailyData, FitnessGoals } from './types';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -39,7 +38,6 @@ const USER_PROFILE_COLLECTION = 'userProfiles';
 const DAILY_ENTRIES_SUBCOLLECTION = 'dailyEntries';
 const SETTINGS_SUBCOLLECTION = 'settings';
 const FITNESS_GOALS_DOC = 'fitnessGoals';
-const GRID_LAYOUTS_DOC = 'gridLayouts';
 
 
 // --- Daily Data ---
@@ -105,39 +103,6 @@ export async function loadUserFitnessGoals(userId: string): Promise<FitnessGoals
     return { goals: '' }; // Return default empty goals if not found
   } catch (error) {
     console.error(`Error loading fitness goals for user ${userId} from Firestore:`, error);
-    throw error;
-  }
-}
-
-// --- Grid Layouts ---
-export async function saveGridLayoutsForUser(userId: string, layouts: Layouts): Promise<void> {
-  try {
-    // Convert Layouts to a plain object for Firestore
-    const layoutsToSave: { [key: string]: any[] } = {};
-    for (const breakpoint in layouts) {
-        layoutsToSave[breakpoint] = layouts[breakpoint].map(layout => ({ ...layout }));
-    }
-
-    const layoutRef = doc(db, USER_PROFILE_COLLECTION, userId, SETTINGS_SUBCOLLECTION, GRID_LAYOUTS_DOC);
-    await setDoc(layoutRef, { layouts: layoutsToSave });
-     console.log(`Grid layouts saved for user ${userId}`);
-  } catch (error) {
-    console.error(`Error saving grid layouts for user ${userId} to Firestore:`, error);
-    throw error;
-  }
-}
-
-export async function loadGridLayoutsForUser(userId: string): Promise<Layouts | undefined> {
-  try {
-    const layoutRef = doc(db, USER_PROFILE_COLLECTION, userId, SETTINGS_SUBCOLLECTION, GRID_LAYOUTS_DOC);
-    const docSnap = await getDoc(layoutRef);
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-      return data.layouts as Layouts; // Assume it's stored correctly as Layouts structure
-    }
-    return undefined;
-  } catch (error) {
-    console.error(`Error loading grid layouts for user ${userId} from Firestore:`, error);
     throw error;
   }
 }

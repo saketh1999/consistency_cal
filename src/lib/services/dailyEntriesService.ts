@@ -51,9 +51,10 @@ export async function saveDailyEntry(
   date: Date, 
   userId: string, 
   content: {
-    notes: string;
-    videoUrls: string[];
+    notes?: string;
+    videoUrls?: string[];
     importantEvents?: string;
+    featuredImageUrl?: string;
   }
 ): Promise<DailyEntry | null> {
   const dateKey = format(date, 'yyyy-MM-dd');
@@ -61,19 +62,43 @@ export async function saveDailyEntry(
   // Check if entry already exists
   const { data: existingEntry } = await supabase
     .from('daily_entries')
-    .select('id')
+    .select('*')
     .eq('date', dateKey)
     .eq('user_id', userId)
     .single();
     
-  const entry = {
+  // Create entry object with existing data (if any) plus updates
+  const entry: any = {
     user_id: userId,
     date: dateKey,
-    notes: content.notes,
-    video_urls: content.videoUrls,
-    important_events: content.importantEvents || null,
     updated_at: new Date().toISOString()
   };
+  
+  // If we're updating an existing entry, preserve existing values
+  if (existingEntry) {
+    // Add existing values for fields we want to preserve
+    entry.notes = content.notes ?? existingEntry.notes ?? '';
+    entry.video_urls = content.videoUrls ?? existingEntry.video_urls ?? [];
+    entry.important_events = content.importantEvents ?? existingEntry.important_events ?? null;
+    
+    // Only set featured_image_url if the column exists in the database schema
+    if (content.featuredImageUrl !== undefined || existingEntry.featured_image_url !== undefined) {
+      entry.featured_image_url = content.featuredImageUrl ?? existingEntry.featured_image_url ?? null;
+    }
+  } else {
+    // New entry - use provided values or defaults
+    entry.notes = content.notes ?? '';
+    entry.video_urls = content.videoUrls ?? [];
+    entry.important_events = content.importantEvents ?? null;
+    
+    // Only set featured_image_url if provided
+    if (content.featuredImageUrl !== undefined) {
+      entry.featured_image_url = content.featuredImageUrl;
+    }
+  }
+  
+  // Log the entry we're about to save
+  console.log('Saving daily entry:', entry);
   
   let result;
   
@@ -99,6 +124,42 @@ export async function saveDailyEntry(
   
   if (result.error) {
     console.error('Error saving daily entry:', result.error);
+    console.error('Error details:', JSON.stringify(result.error, null, 2));
+    console.error('Entry that failed to save:', entry);
+    
+    // Try again without the featured_image_url field if that might be causing the issue
+    if (entry.featured_image_url !== undefined) {
+      console.log('Attempting to save without featured_image_url field...');
+      const { featured_image_url, ...entryWithoutFeatured } = entry;
+      
+      if (existingEntry) {
+        result = await supabase
+          .from('daily_entries')
+          .update(entryWithoutFeatured)
+          .eq('id', existingEntry.id)
+          .select('*')
+          .single();
+      } else {
+        result = await supabase
+          .from('daily_entries')
+          .insert({
+            ...entryWithoutFeatured,
+            created_at: new Date().toISOString()
+          })
+          .select('*')
+          .single();
+      }
+      
+      if (!result.error) {
+        console.log('Save successful without featured_image_url field');
+        // Return success but note that the database might need to be updated
+        console.warn('Database schema may need a "featured_image_url" column in daily_entries table');
+        return result.data as DailyEntry;
+      } else {
+        console.error('Still failed without featured_image_url:', result.error);
+      }
+    }
+    
     return null;
   }
   

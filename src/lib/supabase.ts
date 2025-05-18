@@ -13,6 +13,7 @@ export type DailyEntry = {
   notes: string;
   video_urls: string[];
   important_events: string | null;
+  featured_image_url: string | null;
   created_at: string;
   updated_at: string;
 };

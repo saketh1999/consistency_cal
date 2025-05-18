@@ -41,14 +41,18 @@ const DailyContentView: React.FC<DailyContentViewProps> = ({ selectedDate, data:
   const [dailyEntry, setDailyEntry] = useState<DailyEntry | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isComponentMounted, setIsComponentMounted] = useState(false);
 
   // State for all module data
   const [notes, setNotes] = useState('');
   const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [featuredImageUrl, setFeaturedImageUrl] = useState<string | undefined>(undefined);
   const [videoUrls, setVideoUrls] = useState<string[]>([]);
   const [todos, setTodos] = useState<TodoItem[]>([]);
   const [importantEvents, setImportantEvents] = useState('');
   const [googleCalendarEvents, setGoogleCalendarEvents] = useState<GoogleCalendarEvent[]>([]);
+  const [isUpdatingFromProps, setIsUpdatingFromProps] = useState(false);
+  const [lastSyncedData, setLastSyncedData] = useState<string>('');
 
   // Module configuration - this determines order and visibility
   const [modules, setModules] = useState<ModuleConfig[]>([
@@ -60,92 +64,153 @@ const DailyContentView: React.FC<DailyContentViewProps> = ({ selectedDate, data:
     { id: 'calendar-events-module', type: 'calendar-events', title: 'Calendar Events', defaultOpen: true, initialExpanded: false },
   ]);
 
-  // Initial data loading from Supabase
   useEffect(() => {
-    async function loadData() {
-      if (!selectedDate || !user?.id) return;
+    setIsComponentMounted(true);
+    return () => setIsComponentMounted(false);
+  }, []);
+
+  // Helper to serialize data for comparison
+  const serializeData = (data: any) => {
+    return JSON.stringify({
+      notes: data.notes || '',
+      imageUrls: data.imageUrls || [],
+      featuredImageUrl: data.featuredImageUrl,
+      videoUrls: data.videoUrls || [],
+      todos: data.todos || [],
+      importantEvents: data.importantEvents || '',
+      googleCalendarEvents: data.googleCalendarEvents || []
+    });
+  };
+
+  // Effect to initialize/reset local state when initialData (from props) or selectedDate changes
+  useEffect(() => {
+    if (!selectedDate) {
+      // Reset all fields if no date is selected
+      setNotes('');
+      setImageUrls([]);
+      setFeaturedImageUrl(undefined);
+      setVideoUrls([]);
+      setTodos([]);
+      setImportantEvents('');
+      setGoogleCalendarEvents([]);
+      return;
+    }
+    
+    // Only update if we have initialData and it's different from our current state
+    if (initialData) {
+      const newDataSerialized = serializeData(initialData);
+      if (newDataSerialized !== lastSyncedData) {
+        console.log('DailyContentView: Updating from props', initialData);
+        setIsUpdatingFromProps(true);
+        
+        // Update all the local state values from props
+        setNotes(initialData.notes || '');
+        setImageUrls(initialData.imageUrls || []);
+        setFeaturedImageUrl(initialData.featuredImageUrl);
+        setVideoUrls(initialData.videoUrls || []);
+        setTodos(initialData.todos || []);
+        setImportantEvents(initialData.importantEvents || '');
+        setGoogleCalendarEvents(initialData.googleCalendarEvents || []);
+        
+        // Remember what we've synced
+        setLastSyncedData(newDataSerialized);
+        
+        // Reset the flag after all state updates are processed
+        setTimeout(() => setIsUpdatingFromProps(false), 0);
+      }
+    }
+  }, [initialData, selectedDate, lastSyncedData]);
+
+  // Effect to load data from Supabase when date or user changes
+  useEffect(() => {
+    async function loadDataFromDB() {
+      if (!selectedDate || !user?.id) {
+        setIsLoading(false);
+        return;
+      }
       
       setIsLoading(true);
-      
       try {
-        // Load daily entry
         const entry = await getDailyEntry(selectedDate, user.id);
         setDailyEntry(entry);
-        
         if (entry) {
+          // Don't trigger update chain when loading from DB
+          setIsUpdatingFromProps(true);
+          
+          // Update local state from DB
           setNotes(entry.notes || '');
           setVideoUrls(entry.video_urls || []);
           setImportantEvents(entry.important_events || '');
+          setFeaturedImageUrl(entry.featured_image_url || undefined);
           
-          // Load images for this entry is handled by the ImageUploadModule
-          
-          // The TodoModule will load tasks for the selected date
-        } else {
-          // Reset values if no entry exists
-          setNotes('');
-          setVideoUrls([]);
-          setImportantEvents('');
-          setImageUrls([]);
+          // Reset the flag after all state updates are processed
+          setTimeout(() => setIsUpdatingFromProps(false), 0);
         }
       } catch (error) {
-        console.error('Error loading daily data:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load daily content',
-          variant: 'destructive'
-        });
+        console.error('Error loading daily data from DB:', error);
+        toast({ title: 'Error', description: 'Failed to load daily content from database', variant: 'destructive' });
       } finally {
         setIsLoading(false);
       }
     }
     
-    loadData();
-  }, [selectedDate, user?.id, toast]);
+    if (isComponentMounted) {
+      loadDataFromDB();
+    }
+  }, [selectedDate, user?.id, toast, isComponentMounted]);
+
+  // Effect to synchronize local daily data state with HomePage via onDataChange
+  useEffect(() => {
+    // Skip sync when component is not ready or we're updating from props
+    if (!isComponentMounted || !selectedDate || !onDataChange || isUpdatingFromProps) {
+      return;
+    }
+
+    const dateKey = format(selectedDate, 'yyyy-MM-dd');
+    const currentDailyData: DailyData = {
+      notes,
+      imageUrls,
+      featuredImageUrl,
+      videoUrls,
+      todos,
+      importantEvents,
+      googleCalendarEvents,
+    };
+    
+    // Only sync if data has changed from last sync
+    const currentSerialized = serializeData(currentDailyData);
+    if (currentSerialized !== lastSyncedData) {
+      console.log('DailyContentView: Calling onDataChange for', dateKey, currentDailyData);
+      setLastSyncedData(currentSerialized);
+      onDataChange(dateKey, currentDailyData);
+    }
+  }, [
+    notes, imageUrls, featuredImageUrl, videoUrls, todos, importantEvents, googleCalendarEvents,
+    selectedDate, onDataChange, isComponentMounted, isUpdatingFromProps, lastSyncedData
+  ]);
 
   const handleSave = async () => {
     if (!selectedDate || !user?.id) return;
     
     setIsSaving(true);
-    
     try {
-      const savedEntry = await saveDailyEntry(
-        selectedDate, 
-        user.id, 
-        {
-          notes,
-          videoUrls,
-          importantEvents,
-        }
-      );
-      
-      if (!savedEntry) {
-        throw new Error('Failed to save entry');
-      }
-      
+      const dataToSave: Partial<DailyEntry> = {
+        notes,
+        video_urls: videoUrls,
+        important_events: importantEvents,
+        featured_image_url: featuredImageUrl, // Ensure featured image is part of the save payload
+      };
+
+      const savedEntry = await saveDailyEntry(selectedDate, user.id, dataToSave );      
+      if (!savedEntry) throw new Error('Failed to save entry');
       setDailyEntry(savedEntry);
       
-      // For backward compatibility, still call the original onDataChange
-      const dateKey = format(selectedDate, 'yyyy-MM-dd');
-      onDataChange(dateKey, {
-        notes,
-        imageUrls,
-        videoUrls,
-        todos,
-        importantEvents,
-        googleCalendarEvents
-      });
-      
-      toast({ 
-        title: "Journal Saved!", 
-        description: "Your entries for the day have been saved." 
-      });
+      // onDataChange is now handled by the useEffect, but ensure data is up-to-date for it
+      // The local state updates (setNotes, etc.) will trigger the sync useEffect.
+      toast({ title: "Journal Saved!", description: "Your entries for the day have been saved." });
     } catch (error) {
       console.error('Error saving daily entry:', error);
-      toast({
-        title: "Save Failed",
-        description: "Failed to save your journal. Please try again.",
-        variant: "destructive",
-      });
+      toast({ title: "Save Failed", description: "Failed to save your journal. Please try again.", variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
@@ -193,7 +258,7 @@ const DailyContentView: React.FC<DailyContentViewProps> = ({ selectedDate, data:
     );
   }
 
-  if (isLoading) {
+  if (isLoading && !isComponentMounted) {
     return (
       <Card className="shadow-lg h-full flex flex-col bg-card text-card-foreground">
         <CardHeader>
@@ -258,6 +323,8 @@ const DailyContentView: React.FC<DailyContentViewProps> = ({ selectedDate, data:
                             userId={user.id}
                             imageUrls={imageUrls}
                             setImageUrls={setImageUrls}
+                            featuredImageUrl={featuredImageUrl}
+                            setFeaturedImageUrl={setFeaturedImageUrl}
                             defaultOpen={module.defaultOpen}
                             initialExpanded={module.initialExpanded}
                           />

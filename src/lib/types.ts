@@ -17,6 +17,7 @@ export interface GoogleCalendarEvent {
 export interface DailyData {
   notes?: string;
   imageUrls?: string[]; // Changed from imageUrl: string to imageUrls: string[]
+  featuredImageUrl?: string; // Added to mark a specific image as featured for calendar display
   videoUrls?: string[];
   todos?: TodoItem[];
   importantEvents?: string;

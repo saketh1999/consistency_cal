@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { ImageIcon, GripVertical, XCircleIcon, UploadCloudIcon, Loader2 } from 'lucide-react';
+import { ImageIcon, GripVertical, XCircleIcon, UploadCloudIcon, Loader2, StarIcon } from 'lucide-react';
 import { 
   Collapsible,
   CollapsibleContent,
@@ -22,6 +22,8 @@ interface ImageUploadModuleProps {
   dailyEntryId?: string;
   imageUrls: string[];
   setImageUrls: (urls: string[]) => void;
+  featuredImageUrl?: string;
+  setFeaturedImageUrl?: (url: string | undefined) => void;
   defaultOpen?: boolean;
   initialExpanded?: boolean;
 }
@@ -32,6 +34,8 @@ const ImageUploadModule = ({
   dailyEntryId,
   imageUrls,
   setImageUrls,
+  featuredImageUrl,
+  setFeaturedImageUrl,
   defaultOpen = true,
   initialExpanded = true
 }: ImageUploadModuleProps) => {
@@ -115,10 +119,19 @@ const ImageUploadModule = ({
       setImages([...images, { id: imageEntry.id, url: imageEntry.url }]);
       setImageUrls([...imageUrls, imageEntry.url]);
       
-      toast({
-        title: "Image Uploaded",
-        description: "Your image has been uploaded successfully.",
-      });
+      // If first image or no featured image yet, set as featured
+      if ((!featuredImageUrl || imageUrls.length === 0) && setFeaturedImageUrl) {
+        setFeaturedImageUrl(imageEntry.url);
+        toast({
+          title: "Image Set as Featured",
+          description: "This image will be displayed in the calendar view.",
+        });
+      } else {
+        toast({
+          title: "Image Uploaded",
+          description: "Your image has been uploaded successfully.",
+        });
+      }
     } catch (error) {
       console.error('Error uploading image:', error);
       toast({
@@ -133,7 +146,7 @@ const ImageUploadModule = ({
         fileInputRef.current.value = "";
       }
     }
-  }, [selectedDate, userId, dailyEntryId, images, imageUrls, setImageUrls, toast]);
+  }, [selectedDate, userId, dailyEntryId, images, imageUrls, setImageUrls, featuredImageUrl, setFeaturedImageUrl, toast]);
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -159,8 +172,21 @@ const ImageUploadModule = ({
         setImages(newImages);
         
         const newUrls = [...imageUrls];
-        newUrls.splice(index, 1);
+        const deletedUrl = newUrls.splice(index, 1)[0];
         setImageUrls(newUrls);
+        
+        // If the deleted image was the featured one, reset featured image
+        if (featuredImageUrl === deletedUrl && setFeaturedImageUrl) {
+          if (newUrls.length > 0) {
+            setFeaturedImageUrl(newUrls[0]); // Set first available image as featured
+            toast({ 
+              title: "Featured Image Changed", 
+              description: "The featured image was deleted. The first available image is now featured." 
+            });
+          } else {
+            setFeaturedImageUrl(undefined); // No images left
+          }
+        }
         
         toast({ 
           title: "Image Removed", 
@@ -176,6 +202,48 @@ const ImageUploadModule = ({
         description: "Failed to delete image. Please try again.",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleSetFeatured = (url: string) => {
+    if (setFeaturedImageUrl) {
+      setFeaturedImageUrl(url);
+      
+      // If we have a daily entry ID, let's also save the change immediately
+      if (dailyEntryId && selectedDate && userId) {
+        saveDailyEntry(
+          selectedDate,
+          userId,
+          {
+            featuredImageUrl: url
+          }
+        ).then(result => {
+          if (result) {
+            toast({
+              title: "Featured Image Set",
+              description: "This image will now be displayed in the calendar view.",
+            });
+          } else {
+            toast({
+              title: "Database Warning",
+              description: "Featured image was set locally but couldn't be saved to the database. The changes will be visible but may not persist.",
+              variant: "destructive"
+            });
+          }
+        }).catch(error => {
+          console.error('Error saving featured image:', error);
+          toast({
+            title: "Error Saving Featured Image",
+            description: "There was a problem saving your featured image selection to the database.",
+            variant: "destructive"
+          });
+        });
+      } else {
+        toast({
+          title: "Featured Image Set",
+          description: "This image will now be displayed in the calendar view.",
+        });
+      }
     }
   };
 
@@ -325,23 +393,52 @@ const ImageUploadModule = ({
                       alt={`Uploaded content ${index + 1}`}
                       fill
                       sizes="(max-width: 768px) 100vw, 33vw"
-                      className="rounded-md border border-border object-cover"
+                      className={cn(
+                        "rounded-md border object-cover transition-all duration-200",
+                        featuredImageUrl === url ? "ring-2 ring-yellow-400 border-yellow-400" : "border-border"
+                      )}
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
                         target.src = `https://placehold.co/150x100.png?text=Invalid`;
                         toast({title: "Image Load Error", description: "Could not display an uploaded image.", variant: "destructive"})
                       }}
                     />
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      onClick={() => handleRemoveImage(index)}
-                      aria-label={`Remove image ${index + 1}`}
-                      className="absolute top-1 right-1 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 hover:bg-destructive/80 border-destructive/50"
-                      disabled={isProcessingImages}
-                    >
-                      <XCircleIcon className="h-4 w-4" />
-                    </Button>
+                    <div className="absolute top-1 right-1 flex flex-col gap-1">
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        onClick={() => handleRemoveImage(index)}
+                        aria-label={`Remove image ${index + 1}`}
+                        className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 hover:bg-destructive/80 border-destructive/50"
+                        disabled={isProcessingImages}
+                      >
+                        <XCircleIcon className="h-4 w-4" />
+                      </Button>
+                      
+                      {setFeaturedImageUrl && (
+                        <Button
+                          variant={featuredImageUrl === url ? "default" : "secondary"}
+                          size="icon"
+                          onClick={() => handleSetFeatured(url)}
+                          aria-label={`Set as featured image for calendar view`}
+                          className={cn(
+                            "h-7 w-7 transition-opacity",
+                            featuredImageUrl === url 
+                              ? "opacity-100 bg-yellow-500 hover:bg-yellow-600" 
+                              : "opacity-0 group-hover:opacity-100 bg-black/50 hover:bg-yellow-500/80"
+                          )}
+                          disabled={isProcessingImages || featuredImageUrl === url}
+                          title="Set as featured in calendar"
+                        >
+                          <StarIcon className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                    {featuredImageUrl === url && (
+                      <div className="absolute bottom-1 left-1 bg-yellow-500/80 text-black text-xs px-1.5 py-0.5 rounded-sm flex items-center">
+                        <StarIcon className="h-3 w-3 mr-1" /> Featured
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

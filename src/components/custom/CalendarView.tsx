@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { FC } from 'react';
@@ -8,7 +7,7 @@ import { Calendar } from '@/components/ui/calendar';
 import type { AppData } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { buttonVariants } from '@/components/ui/button';
-import { NotebookTextIcon, VideoIcon, ListChecksIcon, AlertTriangleIcon, ImageIcon } from 'lucide-react'; // Added ImageIcon
+import { NotebookTextIcon, VideoIcon, ListChecksIcon, AlertTriangleIcon, ImageIcon, StarIcon } from 'lucide-react'; // Added StarIcon
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 
@@ -44,7 +43,12 @@ const MyCustomDayContent: FC<MyCustomDayContentProps> = ({ date, displayMonth, a
   const hasIncompleteTodos = dayData?.todos?.some(todo => !todo.completed);
   const hasVideos = dayData?.videoUrls && dayData.videoUrls.length > 0;
   const hasImages = dayData?.imageUrls && dayData.imageUrls.length > 0;
-  const firstImageUrl = hasImages ? dayData.imageUrls![0] : undefined;
+  const hasFeaturedImage = dayData?.featuredImageUrl && dayData.featuredImageUrl.length > 0;
+  
+  // Select the image to display in calendar - prefer featured image if available
+  const displayImageUrl = hasFeaturedImage 
+    ? dayData!.featuredImageUrl 
+    : (hasImages ? dayData!.imageUrls![0] : undefined);
 
   return (
     <div
@@ -66,10 +70,10 @@ const MyCustomDayContent: FC<MyCustomDayContentProps> = ({ date, displayMonth, a
       </div>
 
       {/* Middle part: Image */}
-      {firstImageUrl ? (
+      {displayImageUrl ? (
         <div className="relative w-full h-16 sm:h-18 md:h-20 lg:h-24 my-0.5 overflow-hidden rounded shadow-sm border border-border/50">
           <Image
-            src={firstImageUrl} 
+            src={displayImageUrl} 
             alt={`Content for ${format(date, 'yyyy-MM-dd')}`}
             layout="fill"
             objectFit="cover"
@@ -83,7 +87,16 @@ const MyCustomDayContent: FC<MyCustomDayContentProps> = ({ date, displayMonth, a
               }
             }}
           />
-           {dayData!.imageUrls!.length > 1 && (
+          
+          {/* Featured image indicator */}
+          {hasFeaturedImage && (
+            <div className="absolute top-1 right-1 bg-yellow-500/80 text-black text-[10px] px-1 py-0.5 rounded-sm flex items-center">
+              <StarIcon className="w-2 h-2 mr-0.5" />
+            </div>
+          )}
+          
+          {/* Multiple images indicator */}
+          {dayData!.imageUrls! && dayData!.imageUrls!.length > 1 && (
             <div className="absolute bottom-1 right-1 bg-black/60 text-white text-[10px] px-1 py-0.5 rounded-sm flex items-center">
               <ImageIcon size={10} className="mr-0.5" /> +{dayData!.imageUrls!.length - 1}
             </div>
@@ -98,10 +111,10 @@ const MyCustomDayContent: FC<MyCustomDayContentProps> = ({ date, displayMonth, a
       {/* Bottom part: Icons and Notes snippet */}
       <div className="w-full mt-auto pt-0.5">
         <div className="flex items-center justify-start flex-wrap gap-1.5 mb-0.5">
-            {dayData?.notes && <NotebookTextIcon className={cn("h-3.5 w-3.5", isSelected ? "text-primary-foreground/70" : "text-primary/70")} title="Notes" />}
-            {hasVideos && <VideoIcon className={cn("h-3.5 w-3.5", isSelected ? "text-primary-foreground/70" : "text-primary/70")} title="Video" />}
-            {hasTodos && <ListChecksIcon className={cn("h-3.5 w-3.5", hasIncompleteTodos ? "text-orange-400" : "text-green-400", isSelected && (hasIncompleteTodos ? "text-orange-300" : "text-green-300"))} title="To-Do List" />}
-            {dayData?.importantEvents && <AlertTriangleIcon className={cn("h-3.5 w-3.5", isSelected ? "text-red-400" : "text-red-500")} title="Important Event" />}
+            {dayData?.notes && <NotebookTextIcon className={cn("h-3.5 w-3.5", isSelected ? "text-primary-foreground/70" : "text-primary/70")} aria-label="Notes" />}
+            {hasVideos && <VideoIcon className={cn("h-3.5 w-3.5", isSelected ? "text-primary-foreground/70" : "text-primary/70")} aria-label="Video" />}
+            {hasTodos && <ListChecksIcon className={cn("h-3.5 w-3.5", hasIncompleteTodos ? "text-orange-400" : "text-green-400", isSelected && (hasIncompleteTodos ? "text-orange-300" : "text-green-300"))} aria-label="To-Do List" />}
+            {dayData?.importantEvents && <AlertTriangleIcon className={cn("h-3.5 w-3.5", isSelected ? "text-red-400" : "text-red-500")} aria-label="Important Event" />}
             {/* Icon for images already handled by showing the image itself, or badge for multiple */}
         </div>
         {dayData?.notes && (
@@ -129,7 +142,7 @@ const CalendarView: FC<CalendarViewProps> = ({ selectedDate, onDateChange, appDa
           className="rounded-md border-0 w-full h-full" 
           disabled={(date) => date > new Date() || date < new Date(new Date().setFullYear(new Date().getFullYear() - 5))} 
           components={{
-            DayContent: (dayProps: React.ComponentProps<typeof Calendar>['components']['DayContent'] extends ((props: infer P) => any) ? P : never) => (
+            DayContent: (dayProps) => (
               <MyCustomDayContent
                 date={dayProps.date}
                 displayMonth={dayProps.displayMonth}

@@ -1,11 +1,11 @@
 {
-  "name": "FitPlan Canvas",
-  "short_name": "FitPlan",
-  "description": "Your personal fitness calendar and motivational companion.",
+  "name": "Consistency",
+  "short_name": "Consistency",
+  "description": "Your personal consistency tracker and motivational companion.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#F9FAFB",
-  "theme_color": "#3B82F6",
+  "background_color": "#121212",
+  "theme_color": "#FACC15",
   "icons": [
     {
       "src": "/icons/icon-192x192.png",

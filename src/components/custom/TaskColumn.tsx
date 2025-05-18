@@ -116,7 +116,7 @@ const TaskColumn: FC<TaskColumnProps> = ({
       </CardHeader>
       <CardContent className="flex-grow overflow-hidden p-2">
         {tasks.length > 0 ? (
-          <ScrollArea className="h-[calc(100vh-250px)]">
+          <ScrollArea className="h-[calc(100vh-280px)]">
             <div className="space-y-2 pr-3">
               {tasks.map((task) => (
                 <div 

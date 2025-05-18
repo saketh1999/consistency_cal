@@ -234,77 +234,52 @@ export default function HomePage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center justify-between">
-          <Logo />
-          <nav className="flex items-center space-x-4">
-            <a href="/" className="text-sm font-medium">
-              Calendar
-            </a>
-            <a href="/tasks" className="text-sm font-medium text-muted-foreground hover:text-foreground">
-              Tasks
-            </a>
-          </nav>
+    <main className="flex-1 container mx-auto p-2 md:p-3 lg:p-4">
+      <ResponsiveGridLayout
+        layouts={layouts}
+        breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+        cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
+        rowHeight={30} 
+        compactType="vertical" 
+        onLayoutChange={onLayoutChange}
+        isDraggable={true}
+        isResizable={true} 
+        className="min-h-full"
+      >
+        <div key="calendar" className="bg-card text-card-foreground rounded-lg shadow-md flex flex-col overflow-hidden">
+          <CalendarView
+            selectedDate={selectedDate}
+            onDateChange={handleDateChange}
+            appData={appData}
+          />
         </div>
-      </header>
 
-      <main className="flex-1 container mx-auto p-2 md:p-3 lg:p-4">
-        <ResponsiveGridLayout
-          layouts={layouts}
-          breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-          cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
-          rowHeight={30} 
-          compactType="vertical" 
-          onLayoutChange={onLayoutChange}
-          isDraggable={true} // Default, individual items can override with `static: true`
-          isResizable={true} // Default, individual items can override with `static: true`
-          className="min-h-full"
-          // draggableHandle=".drag-handle" // Optional: If you want specific drag handles
-        >
-          <div key="calendar" className="bg-card text-card-foreground rounded-lg shadow-md flex flex-col overflow-hidden">
-            <CalendarView
-              selectedDate={selectedDate}
-              onDateChange={handleDateChange}
-              appData={appData}
-            />
-          </div>
-
-          <div key="daily" className="bg-card text-card-foreground rounded-lg shadow-md flex flex-col overflow-hidden">
-            <DailyContentView
-              selectedDate={selectedDate}
-              data={currentData}
-              onDataChange={handleDailyDataChange}
-            />
-          </div>
-
-          <div key="global-todo" className="bg-card text-card-foreground rounded-lg shadow-md flex flex-col overflow-hidden">
-            <GlobalTodoView
-              todos={globalTodos}
-              onTodosChange={handleGlobalTodosChange}
-            />
-          </div>
-
-          {/* <div key="google-calendar" className="bg-card text-card-foreground rounded-lg shadow-md flex flex-col overflow-hidden">
-            <GoogleCalendarView
-              selectedDate={selectedDate}
-              onSyncEvents={handleSyncGoogleCalendarEvents}
-            />
-          </div> */}
-
-          <div key="motivation" className="bg-card text-card-foreground rounded-lg shadow-md flex flex-col overflow-hidden">
-            <MotivationalPromptView currentJournalNotes={currentData?.notes} />
-          </div>
-        </ResponsiveGridLayout>
-      </main>
-
-      <footer className="py-6 md:px-8 md:py-0 border-t">
-        <div className="container flex flex-col items-center justify-between gap-4 md:h-24 md:flex-row">
-          <p className="text-balance text-center text-sm leading-loose text-muted-foreground md:text-left">
-            Built with ❤️ for your journey towards consistency. &copy; {new Date().getFullYear()} Consistency.
-          </p>
+        <div key="daily" className="bg-card text-card-foreground rounded-lg shadow-md flex flex-col overflow-hidden">
+          <DailyContentView
+            selectedDate={selectedDate}
+            data={currentData}
+            onDataChange={handleDailyDataChange}
+          />
         </div>
-      </footer>
-    </div>
+
+        <div key="global-todo" className="bg-card text-card-foreground rounded-lg shadow-md flex flex-col overflow-hidden">
+          <GlobalTodoView
+            todos={globalTodos}
+            onTodosChange={handleGlobalTodosChange}
+          />
+        </div>
+
+        {/* <div key="google-calendar" className="bg-card text-card-foreground rounded-lg shadow-md flex flex-col overflow-hidden">
+          <GoogleCalendarView
+            selectedDate={selectedDate}
+            onSyncEvents={handleSyncGoogleCalendarEvents}
+          />
+        </div> */}
+
+        <div key="motivation" className="bg-card text-card-foreground rounded-lg shadow-md flex flex-col overflow-hidden">
+          <MotivationalPromptView currentJournalNotes={currentData?.notes} />
+        </div>
+      </ResponsiveGridLayout>
+    </main>
   );
 }

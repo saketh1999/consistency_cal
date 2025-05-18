@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { format, isPast, isToday, isTomorrow, parseISO, addDays } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import TaskColumn from '@/components/custom/TaskColumn';
-import TaskDatePicker from '@/components/custom/TaskDatePicker';
+import TaskColumn from '../../components/custom/TaskColumn';
+import TaskDatePicker from '../../components/custom/TaskDatePicker';
 import { loadFromLocalStorage, saveToLocalStorage } from '@/lib/localStorageUtils';
 import { useToast } from '@/hooks/use-toast';
 import { CalendarDays } from 'lucide-react';
@@ -175,113 +175,89 @@ export default function TasksPage() {
   );
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center justify-between">
-          <Logo />
-          <nav className="flex items-center space-x-4">
-            <a href="/" className="text-sm font-medium text-muted-foreground hover:text-foreground">
-              Calendar
-            </a>
-            <a href="/tasks" className="text-sm font-medium">
-              Tasks
-            </a>
-          </nav>
+    <main className="flex-1 py-8 flex flex-col items-center bg-background">
+      <div className="max-w-[872px] w-full px-4">
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl font-bold tracking-tight">Task Management</h1>
+          <TaskDatePicker onAddTask={addTask} />
         </div>
-      </header>
 
-      <main className="flex-1 container py-6 flex flex-col items-center">
-        <div className="w-full max-w-screen-xl mx-auto">
-          <div className="flex items-center justify-between mb-8">
-            <h1 className="text-3xl font-bold tracking-tight">Task Management</h1>
-            <TaskDatePicker onAddTask={addTask} />
-          </div>
-
-          {isRescheduling && (
-            <Card className="mb-8 border-primary w-full">
-              <CardContent className="p-4">
-                <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                  <div className="flex items-center">
-                    <CalendarDays className="mr-2 h-5 w-5 text-primary" />
-                    <span>Select a new date for this task:</span>
-                  </div>
-                  <div className="flex space-x-2">
-                    <TaskDatePicker 
-                      onSelectDate={completeReschedule}
-                      buttonLabel="Reschedule"
-                      defaultDate={addDays(new Date(), 1)}
-                    />
-                    <button 
-                      onClick={cancelReschedule}
-                      className="px-3 py-1 text-sm bg-muted rounded-md hover:bg-muted/80"
-                    >
-                      Cancel
-                    </button>
-                  </div>
+        {isRescheduling && (
+          <Card className="mb-8 border-primary w-full">
+            <CardContent className="p-4">
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div className="flex items-center">
+                  <CalendarDays className="mr-2 h-5 w-5 text-primary" />
+                  <span>Select a new date for this task:</span>
                 </div>
-              </CardContent>
-            </Card>
-          )}
+                <div className="flex space-x-2">
+                  <TaskDatePicker 
+                    onSelectDate={completeReschedule}
+                    buttonLabel="Reschedule"
+                    defaultDate={addDays(new Date(), 1)}
+                  />
+                  <button 
+                    onClick={cancelReschedule}
+                    className="px-3 py-1 text-sm bg-muted rounded-md hover:bg-muted/80"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 w-full">
-            <TaskColumn 
-              title="Missed Tasks" 
-              tasks={missedTasks} 
-              onToggleComplete={toggleTaskCompletion}
-              onDeleteTask={deleteTask}
-              onRescheduleTask={startReschedule}
-              color="destructive"
-              columnType="missed"
-              onDragStart={handleDragStart}
-              onDrop={handleDrop}
-            />
-            
-            <TaskColumn 
-              title="Today's Tasks" 
-              tasks={todayTasks}
-              onToggleComplete={toggleTaskCompletion}
-              onDeleteTask={deleteTask}
-              onRescheduleTask={startReschedule}
-              color="primary"
-              columnType="today"
-              onDragStart={handleDragStart}
-              onDrop={handleDrop}
-            />
-            
-            <TaskColumn 
-              title="Tomorrow's Tasks" 
-              tasks={tomorrowTasks}
-              onToggleComplete={toggleTaskCompletion}
-              onDeleteTask={deleteTask}
-              onRescheduleTask={startReschedule}
-              color="accent"
-              columnType="tomorrow"
-              onDragStart={handleDragStart}
-              onDrop={handleDrop}
-            />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+          <TaskColumn 
+            title="Missed Tasks" 
+            tasks={missedTasks} 
+            onToggleComplete={toggleTaskCompletion}
+            onDeleteTask={deleteTask}
+            onRescheduleTask={startReschedule}
+            color="destructive"
+            columnType="missed"
+            onDragStart={handleDragStart}
+            onDrop={handleDrop}
+          />
+          
+          <TaskColumn 
+            title="Today's Tasks" 
+            tasks={todayTasks}
+            onToggleComplete={toggleTaskCompletion}
+            onDeleteTask={deleteTask}
+            onRescheduleTask={startReschedule}
+            color="primary"
+            columnType="today"
+            onDragStart={handleDragStart}
+            onDrop={handleDrop}
+          />
+          
+          <TaskColumn 
+            title="Tomorrow's Tasks" 
+            tasks={tomorrowTasks}
+            onToggleComplete={toggleTaskCompletion}
+            onDeleteTask={deleteTask}
+            onRescheduleTask={startReschedule}
+            color="accent"
+            columnType="tomorrow"
+            onDragStart={handleDragStart}
+            onDrop={handleDrop}
+          />
 
-            <TaskColumn 
-              title="Completed Tasks" 
-              tasks={completedTasks}
-              onToggleComplete={toggleTaskCompletion}
-              onDeleteTask={deleteTask}
-              onRescheduleTask={startReschedule}
-              color="success"
-              columnType="completed"
-              onDragStart={handleDragStart}
-              onDrop={handleDrop}
-            />
-          </div>
+          <TaskColumn 
+            title="Completed Tasks" 
+            tasks={completedTasks}
+            onToggleComplete={toggleTaskCompletion}
+            onDeleteTask={deleteTask}
+            onRescheduleTask={startReschedule}
+            color="success"
+            columnType="completed"
+            onDragStart={handleDragStart}
+            onDrop={handleDrop}
+          />
         </div>
-      </main>
-
-      <footer className="py-6 md:px-8 md:py-0 border-t">
-        <div className="container flex flex-col items-center justify-between gap-4 md:h-24 md:flex-row">
-          <p className="text-balance text-center text-sm leading-loose text-muted-foreground md:text-left">
-            Built with ❤️ for your journey towards consistency. &copy; {new Date().getFullYear()} Consistency.
-          </p>
-        </div>
-      </footer>
-    </div>
+      </div>
+    </main>
   );
 } 

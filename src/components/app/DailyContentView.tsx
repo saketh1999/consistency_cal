@@ -2,7 +2,7 @@
 'use client';
 
 import type { FC } from 'react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -12,9 +12,10 @@ import { Button } from '@/components/ui/button';
 import type { DailyData, TodoItem } from '@/lib/types';
 import YoutubeEmbed from './YoutubeEmbed';
 import { format } from 'date-fns';
-import { ImageIcon, VideoIcon, NotebookTextIcon, ListChecksIcon, AlertTriangleIcon, Trash2Icon, PlusCircleIcon, XCircleIcon } from 'lucide-react';
+import { ImageIcon, VideoIcon, NotebookTextIcon, ListChecksIcon, AlertTriangleIcon, Trash2Icon, PlusCircleIcon, XCircleIcon, UploadCloudIcon } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 interface DailyContentViewProps {
   selectedDate: Date | undefined;
@@ -32,6 +33,7 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
   const [importantEvents, setImportantEvents] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
 
   const extractYoutubeEmbedId = (url: string): string | null => {
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
@@ -49,8 +51,7 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
     setNewTodoText('');
   }, [data, selectedDate]);
 
-  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const processImageFile = useCallback((file: File) => {
     if (file) {
       if (file.size > 5 * 1024 * 1024) { // 5MB limit
         toast({
@@ -59,7 +60,7 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
           variant: "destructive",
         });
         if (fileInputRef.current) {
-          fileInputRef.current.value = ""; 
+          fileInputRef.current.value = "";
         }
         return;
       }
@@ -76,12 +77,19 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
       };
       reader.readAsDataURL(file);
     }
+  }, [toast]);
+
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      processImageFile(file);
+    }
   };
 
   const handleRemoveImage = () => {
     setImageDataUri(undefined);
     if (fileInputRef.current) {
-      fileInputRef.current.value = ""; 
+      fileInputRef.current.value = "";
     }
     toast({ title: "Image Removed", description: "The image has been cleared. Save to confirm." });
   };
@@ -123,17 +131,57 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
   const handleSave = () => {
     if (selectedDate) {
       const dateKey = format(selectedDate, 'yyyy-MM-dd');
-      onDataChange(dateKey, { 
-        notes, 
-        imageUrl: imageDataUri, 
-        videoUrls, 
-        todos, 
-        importantEvents 
+      onDataChange(dateKey, {
+        notes,
+        imageUrl: imageDataUri,
+        videoUrls,
+        todos,
+        importantEvents
       });
       toast({ title: "Journal Saved!", description: "Your entries for the day have been saved." });
     }
   };
-  
+
+  // Drag and Drop handlers
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(false);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // You can add custom drag over logic here if needed
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(false);
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      if (files[0].type.startsWith('image/')) {
+        processImageFile(files[0]);
+      } else {
+        toast({
+          title: "Invalid File Type",
+          description: "Please drop an image file.",
+          variant: "destructive",
+        });
+      }
+      // Clear the data transfer to prevent issues
+      e.dataTransfer.clearData();
+    }
+  };
+
+
   if (!selectedDate) {
     return (
       <Card className="flex h-full items-center justify-center shadow-lg bg-card">
@@ -150,7 +198,7 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
     <Card className="shadow-lg h-full flex flex-col bg-card text-card-foreground">
       <CardHeader>
         <CardTitle className="text-xl font-semibold text-primary">{formattedDate}</CardTitle>
-        <CardDescription className="text-muted-foreground">Log your activities, meals, and thoughts. All fields are editable.</CardDescription>
+        <CardDescription className="text-muted-foreground">Log your activities, meals, and thoughts for the day. All fields are editable.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6 flex-grow overflow-y-auto p-4 md:p-6">
         {/* Notes Section */}
@@ -174,50 +222,65 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
             <ImageIcon className="h-5 w-5" />
             Image
           </Label>
-          <div className="flex items-center gap-2">
-            <Input
-              id="imageUpload"
-              type="file"
-              accept="image/*"
-              ref={fileInputRef}
-              onChange={handleImageChange}
-              className="flex-grow file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/20 file:text-primary hover:file:bg-primary/30 bg-input text-foreground"
-            />
-            {imageDataUri && (
-              <Button variant="outline" size="icon" onClick={handleRemoveImage} aria-label="Remove image" className="border-destructive text-destructive hover:bg-destructive/10">
-                <XCircleIcon className="h-5 w-5" />
-              </Button>
+          <div
+            className={cn(
+              "relative mt-2 overflow-hidden rounded-lg border border-border shadow-sm flex flex-col items-center justify-center bg-muted/30 aspect-[3/2] p-4 transition-all duration-200",
+              isDraggingOver && "border-primary ring-2 ring-primary shadow-lg",
+              imageDataUri && "border-transparent" // Hide border if image is present
+            )}
+            onDragEnter={handleDragEnter}
+            onDragLeave={handleDragLeave}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+          >
+            {imageDataUri ? (
+              <>
+                <Image
+                  src={imageDataUri}
+                  alt="User uploaded content"
+                  width={600}
+                  height={400}
+                  className="aspect-[3/2] w-full object-cover rounded-md"
+                  data-ai-hint="journal entry"
+                  onError={(e) => {
+                    e.currentTarget.src = `https://placehold.co/600x400.png?text=Invalid+Image`;
+                    toast({title: "Image Load Error", description: "Could not display the uploaded image.", variant: "destructive"})
+                  }}
+                />
+                <Button variant="outline" size="icon" onClick={handleRemoveImage} aria-label="Remove image" className="absolute top-2 right-2 border-destructive text-destructive hover:bg-destructive/10 bg-background/50 hover:bg-destructive/20 z-10">
+                  <XCircleIcon className="h-5 w-5" />
+                </Button>
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center text-center pointer-events-none">
+                <UploadCloudIcon className={cn("h-12 w-12 mb-2", isDraggingOver ? "text-primary" : "text-muted-foreground/70")} />
+                <p className={cn("text-sm font-medium", isDraggingOver ? "text-primary" : "text-muted-foreground/90")}>
+                  {isDraggingOver ? "Drop image here" : "Drag & drop or click to upload"}
+                </p>
+                <p className="text-xs text-muted-foreground/70">Max 5MB</p>
+              </div>
             )}
           </div>
-          {imageDataUri ? (
-            <div className="mt-2 overflow-hidden rounded-lg border border-border shadow-sm">
-              <Image
-                src={imageDataUri}
-                alt="User uploaded content"
-                width={600}
-                height={400}
-                className="aspect-[3/2] w-full object-cover"
-                data-ai-hint="journal entry"
-                onError={(e) => {
-                  e.currentTarget.src = `https://placehold.co/600x400.png?text=Invalid+Image`;
-                  toast({title: "Image Load Error", description: "Could not display the uploaded image.", variant: "destructive"})
-                }}
-              />
-            </div>
-          ) : (
-             <div className="mt-2 overflow-hidden rounded-lg border border-border shadow-sm flex items-center justify-center bg-muted/30 aspect-[3/2]">
-                <Image
-                    src={`https://placehold.co/600x400.png`}
-                    alt="Placeholder for image"
-                    width={600}
-                    height={400}
-                    className="aspect-[3/2] w-full object-cover opacity-50"
-                    data-ai-hint="placeholder fitness"
-                />
-                <span className="absolute text-muted-foreground/70">Upload an image</span>
-            </div>
-           )}
+          <Input
+            id="imageUpload"
+            type="file"
+            accept="image/*"
+            ref={fileInputRef}
+            onChange={handleImageChange}
+            className="sr-only" // Visually hidden, but accessible for click-to-upload
+            onClick={(event) => { (event.target as HTMLInputElement).value = '' }} // Reset input on click
+          />
+          {!imageDataUri && (
+             <Button 
+                variant="outline" 
+                className="w-full mt-2 border-primary text-primary hover:bg-primary/10"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <ImageIcon className="mr-2 h-4 w-4" /> Select Image
+            </Button>
+          )}
         </div>
+
 
         {/* YouTube Video Section */}
         <div className="space-y-2">
@@ -337,3 +400,4 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
 };
 
 export default DailyContentView;
+

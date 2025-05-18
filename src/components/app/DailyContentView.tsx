@@ -25,7 +25,7 @@ interface DailyContentViewProps {
 
 const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDataChange }) => {
   const [notes, setNotes] = useState('');
-  const [imageDataUri, setImageDataUri] = useState<string | undefined>(undefined);
+  const [imageUrls, setImageUrls] = useState<string[]>([]); // Changed from imageDataUri
   const [videoUrls, setVideoUrls] = useState<string[]>([]);
   const [currentVideoUrlInput, setCurrentVideoUrlInput] = useState('');
   const [todos, setTodos] = useState<TodoItem[]>([]);
@@ -43,7 +43,7 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
 
   useEffect(() => {
     setNotes(data?.notes || '');
-    setImageDataUri(data?.imageUrl || undefined);
+    setImageUrls(data?.imageUrls || []); // Changed from data?.imageUrl
     setVideoUrls(data?.videoUrls || []);
     setCurrentVideoUrlInput('');
     setTodos(data?.todos || []);
@@ -66,7 +66,7 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
       }
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImageDataUri(reader.result as string);
+        setImageUrls(prevUrls => [...prevUrls, reader.result as string]); // Add to array
       };
       reader.onerror = () => {
         toast({
@@ -86,10 +86,11 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
     }
   };
 
-  const handleRemoveImage = () => {
-    setImageDataUri(undefined);
+  const handleRemoveImage = (indexToRemove: number) => {
+    setImageUrls(prevUrls => prevUrls.filter((_, index) => index !== indexToRemove));
     if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+      // If all images are removed, reset the file input, though it's less critical with multiple files.
+      if (imageUrls.length === 1) fileInputRef.current.value = "";
     }
     toast({ title: "Image Removed", description: "The image has been cleared. Save to confirm." });
   };
@@ -133,7 +134,7 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
       const dateKey = format(selectedDate, 'yyyy-MM-dd');
       onDataChange(dateKey, {
         notes,
-        imageUrl: imageDataUri,
+        imageUrls, // Save array of image URLs
         videoUrls,
         todos,
         importantEvents
@@ -158,7 +159,6 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    // You can add custom drag over logic here if needed
   };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -168,7 +168,7 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
       if (files[0].type.startsWith('image/')) {
-        processImageFile(files[0]);
+        processImageFile(files[0]); // Will add to the array
       } else {
         toast({
           title: "Invalid File Type",
@@ -176,7 +176,6 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
           variant: "destructive",
         });
       }
-      // Clear the data transfer to prevent issues
       e.dataTransfer.clearData();
     }
   };
@@ -216,68 +215,82 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
           />
         </div>
 
-        {/* Image Upload Section */}
+        {/* Image Upload Section - Updated for multiple images */}
         <div className="space-y-2">
           <Label htmlFor="imageUpload" className="flex items-center gap-2 font-medium text-primary">
             <ImageIcon className="h-5 w-5" />
-            Image
+            Images ({imageUrls.length})
           </Label>
           <div
             className={cn(
-              "relative mt-2 overflow-hidden rounded-lg border border-border shadow-sm flex flex-col items-center justify-center bg-muted/30 aspect-[3/2] p-4 transition-all duration-200",
+              "relative mt-2 overflow-hidden rounded-lg border border-border shadow-sm flex flex-col items-center justify-center bg-muted/30 p-4 transition-all duration-200",
               isDraggingOver && "border-primary ring-2 ring-primary shadow-lg",
-              imageDataUri && "border-transparent" // Hide border if image is present
+              imageUrls.length > 0 && "border-transparent", 
+              imageUrls.length === 0 && "min-h-[150px]" // Ensure drop zone has some height when empty
             )}
             onDragEnter={handleDragEnter}
             onDragLeave={handleDragLeave}
             onDragOver={handleDragOver}
             onDrop={handleDrop}
+            onClick={() => imageUrls.length === 0 && fileInputRef.current?.click()} // Allow click on empty area
           >
-            {imageDataUri ? (
-              <>
-                <Image
-                  src={imageDataUri}
-                  alt="User uploaded content"
-                  width={600}
-                  height={400}
-                  className="aspect-[3/2] w-full object-cover rounded-md"
-                  data-ai-hint="journal entry"
-                  onError={(e) => {
-                    e.currentTarget.src = `https://placehold.co/600x400.png?text=Invalid+Image`;
-                    toast({title: "Image Load Error", description: "Could not display the uploaded image.", variant: "destructive"})
-                  }}
-                />
-                <Button variant="outline" size="icon" onClick={handleRemoveImage} aria-label="Remove image" className="absolute top-2 right-2 border-destructive text-destructive hover:bg-destructive/10 bg-background/50 hover:bg-destructive/20 z-10">
-                  <XCircleIcon className="h-5 w-5" />
-                </Button>
-              </>
-            ) : (
+            {imageUrls.length === 0 && (
               <div className="flex flex-col items-center justify-center text-center pointer-events-none">
                 <UploadCloudIcon className={cn("h-12 w-12 mb-2", isDraggingOver ? "text-primary" : "text-muted-foreground/70")} />
                 <p className={cn("text-sm font-medium", isDraggingOver ? "text-primary" : "text-muted-foreground/90")}>
                   {isDraggingOver ? "Drop image here" : "Drag & drop or click to upload"}
                 </p>
-                <p className="text-xs text-muted-foreground/70">Max 5MB</p>
+                <p className="text-xs text-muted-foreground/70">Max 5MB per image</p>
               </div>
             )}
           </div>
+          {/* Hidden file input */}
           <Input
             id="imageUpload"
             type="file"
             accept="image/*"
             ref={fileInputRef}
             onChange={handleImageChange}
-            className="sr-only" // Visually hidden, but accessible for click-to-upload
-            onClick={(event) => { (event.target as HTMLInputElement).value = '' }} // Reset input on click
+            className="sr-only"
+            onClick={(event) => { (event.target as HTMLInputElement).value = '' }}
           />
-          {!imageDataUri && (
-             <Button 
-                variant="outline" 
-                className="w-full mt-2 border-primary text-primary hover:bg-primary/10"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <ImageIcon className="mr-2 h-4 w-4" /> Select Image
-            </Button>
+           {/* Button to trigger file input, shown below the drop zone */}
+          <Button 
+              variant="outline" 
+              className="w-full mt-2 border-primary text-primary hover:bg-primary/10"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <ImageIcon className="mr-2 h-4 w-4" /> Add Image
+          </Button>
+
+          {imageUrls.length > 0 && (
+            <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {imageUrls.map((url, index) => (
+                <div key={index} className="relative group aspect-[3/2]">
+                  <Image
+                    src={url}
+                    alt={`Uploaded content ${index + 1}`}
+                    layout="fill"
+                    objectFit="cover"
+                    className="rounded-md border border-border"
+                    data-ai-hint="journal entry"
+                    onError={(e) => {
+                      e.currentTarget.src = `https://placehold.co/150x100.png?text=Invalid`;
+                      toast({title: "Image Load Error", description: "Could not display an uploaded image.", variant: "destructive"})
+                    }}
+                  />
+                  <Button 
+                    variant="destructive" 
+                    size="icon" 
+                    onClick={() => handleRemoveImage(index)} 
+                    aria-label={`Remove image ${index + 1}`}
+                    className="absolute top-1 right-1 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 hover:bg-destructive/80 border-destructive/50"
+                  >
+                    <XCircleIcon className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
           )}
         </div>
 
@@ -400,4 +413,3 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
 };
 
 export default DailyContentView;
-

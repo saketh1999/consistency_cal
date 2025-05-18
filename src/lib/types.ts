@@ -7,8 +7,8 @@ export interface TodoItem {
 
 export interface DailyData {
   notes?: string;
-  imageUrl?: string; // Will now store data URI for uploads
-  videoUrls?: string[]; // Changed from videoUrl: string to videoUrls: string[]
+  imageUrls?: string[]; // Changed from imageUrl: string to imageUrls: string[]
+  videoUrls?: string[];
   todos?: TodoItem[];
   importantEvents?: string;
 }

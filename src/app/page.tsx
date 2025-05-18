@@ -1,14 +1,14 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import CalendarView from '@/components/app/CalendarView';
 import DailyContentView from '@/components/app/DailyContentView';
 import MotivationalPromptView from '@/components/app/MotivationalPromptView';
 import type { AppData, DailyData } from '@/lib/types';
 import { loadFromLocalStorage, saveToLocalStorage } from '@/lib/localStorageUtils';
 import { Logo } from '@/components/icons/Logo';
-import { Separator } from '@/components/ui/separator';
 
 const APP_DATA_KEY = 'fitPlanCanvasData';
 
@@ -43,9 +43,9 @@ export default function HomePage() {
       </header>
 
       <main className="flex-1 container mx-auto p-4 md:p-6 lg:p-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
-          {/* Left Column: Calendar */}
-          <div className="lg:col-span-1 flex flex-col gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Expanded Calendar View */}
+          <div className="lg:col-span-2 flex flex-col">
             <CalendarView
               selectedDate={selectedDate}
               onDateChange={handleDateChange}
@@ -53,17 +53,13 @@ export default function HomePage() {
             />
           </div>
 
-          {/* Middle Column: Daily Content */}
-          <div className="lg:col-span-1 flex flex-col gap-6 min-h-[600px] lg:min-h-0">
-             <DailyContentView
+          {/* Right Column: Daily Content and Motivation, stacked */}
+          <div className="lg:col-span-1 flex flex-col gap-6">
+            <DailyContentView
               selectedDate={selectedDate}
               data={currentData}
               onDataChange={handleDailyDataChange}
             />
-          </div>
-          
-          {/* Right Column: Motivational Prompt */}
-          <div className="lg:col-span-1 flex flex-col gap-6 min-h-[600px] lg:min-h-0">
             <MotivationalPromptView currentJournalNotes={currentData?.notes} />
           </div>
         </div>

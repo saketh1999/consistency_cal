@@ -24,15 +24,15 @@ const GRID_LAYOUT_KEY = 'fitPlanCanvasGridLayouts';
 
 // Define initial layouts for different breakpoints
 const initialLayouts: Layouts = {
-  lg: [ // 12 columns - Two equal columns
-    { i: 'calendar', x: 0, y: 0, w: 6, h: 12, minW: 4, minH: 8 },
-    { i: 'daily', x: 6, y: 0, w: 6, h: 7, minW: 4, minH: 5 },
-    { i: 'motivation', x: 6, y: 7, w: 6, h: 5, minW: 4, minH: 4 },
+  lg: [ // 12 columns
+    { i: 'calendar', x: 0, y: 0, w: 7, h: 12, minW: 4, minH: 8 }, // Calendar on the left, wider
+    { i: 'daily', x: 7, y: 0, w: 5, h: 7, minW: 3, minH: 5 },    // Daily content on the right
+    { i: 'motivation', x: 7, y: 7, w: 5, h: 5, minW: 3, minH: 4 }, // Motivation on the right, below daily
   ],
-  md: [ // 10 columns - Two equal columns
-    { i: 'calendar', x: 0, y: 0, w: 5, h: 12, minW: 4, minH: 8 },
-    { i: 'daily', x: 5, y: 0, w: 5, h: 7, minW: 3, minH: 5 },
-    { i: 'motivation', x: 5, y: 7, w: 5, h: 5, minW: 3, minH: 4 },
+  md: [ // 10 columns
+    { i: 'calendar', x: 0, y: 0, w: 6, h: 12, minW: 4, minH: 8 }, // Calendar on the left, wider
+    { i: 'daily', x: 6, y: 0, w: 4, h: 7, minW: 3, minH: 5 },    // Daily content on the right
+    { i: 'motivation', x: 6, y: 7, w: 4, h: 5, minW: 3, minH: 4 }, // Motivation on the right, below daily
   ],
   sm: [ // 6 columns - Single stacked column
     { i: 'calendar', x: 0, y: 0, w: 6, h: 8, minW: 4, minH: 6 },
@@ -67,8 +67,6 @@ export default function HomePage() {
       try {
         const parsedLayouts = JSON.parse(savedLayouts);
         if (typeof parsedLayouts === 'object' && parsedLayouts !== null) {
-          // Basic validation: ensure parsedLayouts has keys that match initialLayouts (lg, md, etc.)
-          // and that each key points to an array. This is a simple check.
           const breakpoints = Object.keys(initialLayouts);
           const isValidLayoutStructure = breakpoints.every(bp => 
             parsedLayouts.hasOwnProperty(bp) && Array.isArray(parsedLayouts[bp])
@@ -78,20 +76,19 @@ export default function HomePage() {
             setLayouts(parsedLayouts);
           } else {
             console.warn("Saved layout structure is invalid, resetting to default.");
-            localStorage.removeItem(GRID_LAYOUT_KEY); // Clear invalid data
-            setLayouts(initialLayouts); // Explicitly set to default
+            localStorage.removeItem(GRID_LAYOUT_KEY); 
+            setLayouts(initialLayouts); 
           }
         } else {
-           localStorage.removeItem(GRID_LAYOUT_KEY); // Clear invalid data
-           setLayouts(initialLayouts); // Explicitly set to default
+           localStorage.removeItem(GRID_LAYOUT_KEY); 
+           setLayouts(initialLayouts); 
         }
       } catch (e) {
         console.error("Failed to parse saved layouts, resetting to default.", e);
-        localStorage.removeItem(GRID_LAYOUT_KEY); // Clear invalid data
-        setLayouts(initialLayouts); // Explicitly set to default
+        localStorage.removeItem(GRID_LAYOUT_KEY); 
+        setLayouts(initialLayouts); 
       }
     } else {
-      // If no saved layouts, ensure initialLayouts is set
       setLayouts(initialLayouts);
     }
     setIsMounted(true); 
@@ -108,7 +105,7 @@ export default function HomePage() {
   };
 
   const onLayoutChange = (currentLayout: Layout[], allLayouts: Layouts) => {
-    if (isMounted) {
+    if (isMounted) { // Only save layouts after initial mount to avoid overwriting defaults prematurely
       setLayouts(allLayouts);
       localStorage.setItem(GRID_LAYOUT_KEY, JSON.stringify(allLayouts));
     }
@@ -145,9 +142,6 @@ export default function HomePage() {
           isDraggable={true}
           isResizable={true}
           className="min-h-full"
-          // To prevent content selection issues while dragging
-          // onTouchStart={(e) => e.stopPropagation()}
-          // onMouseDown={(e) => e.stopPropagation()}
         >
           <div key="calendar" className="bg-card text-card-foreground rounded-lg shadow-md flex flex-col overflow-hidden">
             <CalendarView

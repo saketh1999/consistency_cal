@@ -4,6 +4,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { NavBar } from '@/components/custom/NavBar';
 import { Footer } from '@/components/custom/Footer';
+import { AuthProvider } from '@/lib/hooks/useAuth';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -41,12 +42,14 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
-        <div className="flex min-h-screen flex-col bg-background">
-          <NavBar />
-          {children}
-          <Footer />
-        </div>
-        <Toaster />
+        <AuthProvider>
+          <div className="flex min-h-screen flex-col bg-background">
+            <NavBar />
+            {children}
+            <Footer />
+          </div>
+          <Toaster />
+        </AuthProvider>
       </body>
     </html>
   );

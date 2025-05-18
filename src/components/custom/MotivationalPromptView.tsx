@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { FC } from 'react';
@@ -12,6 +11,8 @@ import { generateMotivationalPrompt } from '@/ai/flows/generate-motivational-pro
 import type { FitnessGoals } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { loadFromLocalStorage, saveToLocalStorage } from '@/lib/localStorageUtils';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Separator } from '@/components/ui/separator';
 
 const FITNESS_GOALS_KEY = 'consistencyFitnessGoals'; // Updated key
 
@@ -96,15 +97,37 @@ const MotivationalPromptView: FC<MotivationalPromptViewProps> = ({ currentJourna
             onChange={(e) => setFitnessGoals(e.target.value)}
             className="min-h-[80px] resize-none"
           />
-          <Button onClick={handleSaveGoals} variant="outline" size="sm" className="mt-2">Save Goals</Button>
+          <div className="flex justify-end">
+            <Button onClick={handleSaveGoals} variant="outline" size="sm" className="mt-2">Save Goals</Button>
+          </div>
         </div>
         
-        <Button onClick={handleGeneratePrompt} disabled={isLoading} className="w-full bg-primary hover:bg-primary/90">
+        <Separator className="my-4" />
+        
+        <Button 
+          onClick={handleGeneratePrompt} 
+          disabled={isLoading} 
+          className="w-full bg-primary hover:bg-primary/90"
+        >
           <SparklesIcon className="mr-2 h-5 w-5" />
           {isLoading ? 'Generating...' : 'Get Today\'s Motivation'}
         </Button>
 
-        {motivationalMessage && (
+        {isLoading && (
+          <Card className="bg-primary/10 border-primary/30">
+            <CardHeader>
+              <CardTitle className="text-lg text-primary">Generating your inspiration...</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-5/6" />
+              <Skeleton className="h-4 w-4/6" />
+              <Skeleton className="h-4 w-full" />
+            </CardContent>
+          </Card>
+        )}
+
+        {!isLoading && motivationalMessage && (
           <Card className="bg-primary/10 border-primary/30">
             <CardHeader>
               <CardTitle className="text-lg text-primary">Your Daily Boost!</CardTitle>

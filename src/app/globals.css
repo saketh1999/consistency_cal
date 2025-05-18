@@ -42,6 +42,18 @@ body {
     --sidebar-accent-foreground: 35 85% 5%;
     --sidebar-border: 214.3 31.8% 91.4%;
     --sidebar-ring: 45 90% 55%;
+    /* Google Calendar Colors */
+    --google-calendar-1: #7986cb; /* Lavender */
+    --google-calendar-2: #33b679; /* Sage */
+    --google-calendar-3: #8e24aa; /* Grape */
+    --google-calendar-4: #e67c73; /* Flamingo */
+    --google-calendar-5: #f6bf26; /* Banana */
+    --google-calendar-6: #f4511e; /* Tangerine */
+    --google-calendar-7: #039be5; /* Peacock */
+    --google-calendar-8: #616161; /* Graphite */
+    --google-calendar-9: #3f51b5; /* Blueberry */
+    --google-calendar-10: #0b8043; /* Basil */
+    --google-calendar-11: #d50000; /* Tomato */
   }
 
   .dark {

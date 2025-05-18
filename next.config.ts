@@ -16,6 +16,14 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      { // Allow any hostname for user-provided image URLs. Be cautious in production.
+        protocol: 'https',
+        hostname: '**', 
+      },
+      {
+        protocol: 'http', // Allow HTTP as well for flexibility
+        hostname: '**',
+      }
     ],
   },
 };

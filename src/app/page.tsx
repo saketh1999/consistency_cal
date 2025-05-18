@@ -238,7 +238,14 @@ export default function HomePage() {
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center justify-between">
           <Logo />
-          {/* Future: Add UserProfile/Auth button here */}
+          <nav className="flex items-center space-x-4">
+            <a href="/" className="text-sm font-medium">
+              Calendar
+            </a>
+            <a href="/tasks" className="text-sm font-medium text-muted-foreground hover:text-foreground">
+              Tasks
+            </a>
+          </nav>
         </div>
       </header>
 

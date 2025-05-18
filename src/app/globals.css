@@ -25,6 +25,8 @@ body {
     --accent-foreground: 35 85% 5%; /* Dark text for Accent */
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
+    --success: 142 76% 36%; /* Green */
+    --success-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 45 90% 55%; /* Gold/Yellow for ring */
@@ -73,6 +75,8 @@ body {
     --accent-foreground: 35 85% 5%; /* Dark text on Accent */
     --destructive: 0 70% 50%; /* Adjusted destructive for dark theme */
     --destructive-foreground: 0 0% 95%;
+    --success: 142 70% 45%; /* Adjusted green for dark theme */
+    --success-foreground: 0 0% 95%;
     --border: 220 10% 25%; /* Subtle border color */
     --input: 220 10% 22%; /* Input background */
     --ring: 45 90% 55%;  /* Ring color to match primary */

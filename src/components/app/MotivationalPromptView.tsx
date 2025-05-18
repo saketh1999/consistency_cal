@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { FC } from 'react';
@@ -12,7 +13,7 @@ import type { FitnessGoals } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { loadFromLocalStorage, saveToLocalStorage } from '@/lib/localStorageUtils';
 
-const FITNESS_GOALS_KEY = 'fitPlanCanvasGoals';
+const FITNESS_GOALS_KEY = 'consistencyFitnessGoals'; // Updated key
 
 interface MotivationalPromptViewProps {
   currentJournalNotes: string | undefined;

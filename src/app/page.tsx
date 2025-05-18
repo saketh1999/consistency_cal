@@ -19,35 +19,35 @@ import type { Layout, Layouts } from 'react-grid-layout';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
-const APP_DATA_KEY = 'fitPlanCanvasData';
-const GRID_LAYOUT_KEY = 'fitPlanCanvasGridLayouts';
+const APP_DATA_KEY = 'consistencyAppData'; // Updated key
+const GRID_LAYOUT_KEY = 'consistencyGridLayouts'; // Updated key
 
 // Define initial layouts for different breakpoints
 const initialLayouts: Layouts = {
   lg: [ // 12 columns
-    { i: 'calendar', x: 0, y: 0, w: 7, h: 28, minW: 6, minH: 20, static: true }, // Calendar on the left, static and taller
-    { i: 'daily', x: 7, y: 0, w: 5, h: 14, minW: 3, minH: 8, static: false },    // Daily content on the right, top
-    { i: 'motivation', x: 7, y: 14, w: 5, h: 14, minW: 3, minH: 6, static: false }, // Motivation on the right, bottom
+    { i: 'calendar', x: 0, y: 0, w: 7, h: 28, minW: 6, minH: 20, static: true },
+    { i: 'daily', x: 7, y: 0, w: 5, h: 14, minW: 3, minH: 8, static: false },
+    { i: 'motivation', x: 7, y: 14, w: 5, h: 14, minW: 3, minH: 6, static: false },
   ],
   md: [ // 10 columns
-    { i: 'calendar', x: 0, y: 0, w: 6, h: 26, minW: 5, minH: 18, static: true }, 
-    { i: 'daily', x: 6, y: 0, w: 4, h: 13, minW: 3, minH: 7, static: false },    
-    { i: 'motivation', x: 6, y: 13, w: 4, h: 13, minW: 3, minH: 5, static: false }, 
+    { i: 'calendar', x: 0, y: 0, w: 6, h: 28, minW: 5, minH: 18, static: true },
+    { i: 'daily', x: 6, y: 0, w: 4, h: 14, minW: 3, minH: 7, static: false },
+    { i: 'motivation', x: 6, y: 14, w: 4, h: 14, minW: 3, minH: 5, static: false },
   ],
   sm: [ // 6 columns - Single stacked column
-    { i: 'calendar', x: 0, y: 0, w: 6, h: 20, minW: 4, minH: 16, static: true },
-    { i: 'daily', x: 0, y: 20, w: 6, h: 10, minW: 3, minH: 7, static: false },
-    { i: 'motivation', x: 0, y: 30, w: 6, h: 10, minW: 3, minH: 5, static: false },
+    { i: 'calendar', x: 0, y: 0, w: 6, h: 28, minW: 4, minH: 16, static: true },
+    { i: 'daily', x: 0, y: 28, w: 6, h: 14, minW: 3, minH: 7, static: false },
+    { i: 'motivation', x: 0, y: 42, w: 6, h: 14, minW: 3, minH: 5, static: false },
   ],
   xs: [ // 4 columns - Single stacked column
-    { i: 'calendar', x: 0, y: 0, w: 4, h: 18, minW: 3, minH: 15, static: true },
-    { i: 'daily', x: 0, y: 18, w: 4, h: 9, minW: 3, minH: 6, static: false },
-    { i: 'motivation', x: 0, y: 27, w: 4, h: 9, minW: 3, minH: 5, static: false },
+    { i: 'calendar', x: 0, y: 0, w: 4, h: 28, minW: 3, minH: 15, static: true },
+    { i: 'daily', x: 0, y: 28, w: 4, h: 14, minW: 3, minH: 6, static: false },
+    { i: 'motivation', x: 0, y: 42, w: 4, h: 14, minW: 3, minH: 5, static: false },
   ],
   xxs: [ // 2 columns - Single stacked column
-    { i: 'calendar', x: 0, y: 0, w: 2, h: 18, minW: 2, minH: 15, static: true },
-    { i: 'daily', x: 0, y: 18, w: 2, h: 9, minW: 2, minH: 6, static: false },
-    { i: 'motivation', x: 0, y: 27, w: 2, h: 9, minW: 2, minH: 5, static: false },
+    { i: 'calendar', x: 0, y: 0, w: 2, h: 28, minW: 2, minH: 15, static: true },
+    { i: 'daily', x: 0, y: 28, w: 2, h: 14, minW: 2, minH: 6, static: false },
+    { i: 'motivation', x: 0, y: 42, w: 2, h: 14, minW: 2, minH: 5, static: false },
   ],
 };
 
@@ -217,7 +217,7 @@ export default function HomePage() {
       <footer className="py-6 md:px-8 md:py-0 border-t">
         <div className="container flex flex-col items-center justify-between gap-4 md:h-24 md:flex-row">
           <p className="text-balance text-center text-sm leading-loose text-muted-foreground md:text-left">
-            Built with ❤️ for your fitness journey. &copy; {new Date().getFullYear()} FitPlan Canvas.
+            Built with ❤️ for your journey towards consistency. &copy; {new Date().getFullYear()} Consistency.
           </p>
         </div>
       </footer>

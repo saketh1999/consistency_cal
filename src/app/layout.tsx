@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'FitPlan Canvas',
+  title: 'Consistency',
   description: 'Your personal fitness calendar and motivational companion.',
   manifest: '/manifest.json',
 };

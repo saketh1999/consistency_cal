@@ -111,93 +111,116 @@ export async function uploadImage(file: File, dailyEntryId: string, userId: stri
   const fileName = `${userId}/${dailyEntryId}/${Date.now()}.${fileExt}`;
   const filePath = `daily-images/${fileName}`;
   
-  // Upload to storage
-  const { data: uploadData, error: uploadError } = await supabase.storage
-    .from('images')
-    .upload(filePath, file);
+  try {
+    console.log(`Uploading image for user ${userId} to entry ${dailyEntryId}`);
     
-  if (uploadError) {
-    console.error('Error uploading image:', uploadError);
+    // Upload to storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('images')
+      .upload(filePath, file);
+      
+    if (uploadError) {
+      console.error('Error uploading image:', uploadError);
+      return null;
+    }
+    
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from('images')
+      .getPublicUrl(filePath);
+      
+    if (!urlData?.publicUrl) {
+      console.error('Could not get public URL for image');
+      return null;
+    }
+    
+    // Save image metadata to database
+    const { data: imageEntry, error: imageError } = await supabase
+      .from('images')
+      .insert({
+        daily_entry_id: dailyEntryId,
+        storage_path: filePath,
+        url: urlData.publicUrl,
+        created_at: new Date().toISOString()
+      })
+      .select('*')
+      .single();
+      
+    if (imageError) {
+      console.error('Error saving image metadata:', imageError);
+      // Attempt to clean up the uploaded file
+      await supabase.storage.from('images').remove([filePath]);
+      return null;
+    }
+    
+    return imageEntry as ImageEntry;
+  } catch (err) {
+    console.error('Exception in uploadImage:', err);
     return null;
   }
-  
-  // Get public URL
-  const { data: urlData } = supabase.storage
-    .from('images')
-    .getPublicUrl(filePath);
-    
-  if (!urlData?.publicUrl) {
-    console.error('Could not get public URL for image');
-    return null;
-  }
-  
-  // Save image metadata to database
-  const { data: imageEntry, error: imageError } = await supabase
-    .from('images')
-    .insert({
-      daily_entry_id: dailyEntryId,
-      storage_path: filePath,
-      url: urlData.publicUrl,
-      created_at: new Date().toISOString()
-    })
-    .select('*')
-    .single();
-    
-  if (imageError) {
-    console.error('Error saving image metadata:', imageError);
-    return null;
-  }
-  
-  return imageEntry as ImageEntry;
 }
 
 export async function getDailyImages(dailyEntryId: string): Promise<ImageEntry[]> {
-  const { data, error } = await supabase
-    .from('images')
-    .select('*')
-    .eq('daily_entry_id', dailyEntryId);
+  try {
+    console.log(`Getting images for entry ${dailyEntryId}`);
     
-  if (error) {
-    console.error('Error fetching daily images:', error);
+    const { data, error } = await supabase
+      .from('images')
+      .select('*')
+      .eq('daily_entry_id', dailyEntryId);
+      
+    if (error) {
+      console.error('Error fetching daily images:', error);
+      return [];
+    }
+    
+    return data as ImageEntry[];
+  } catch (err) {
+    console.error('Exception in getDailyImages:', err);
     return [];
   }
-  
-  return data as ImageEntry[];
 }
 
 export async function deleteImage(imageId: string): Promise<boolean> {
-  // First get the image to find the storage path
-  const { data: image, error: fetchError } = await supabase
-    .from('images')
-    .select('storage_path')
-    .eq('id', imageId)
-    .single();
+  try {
+    console.log(`Deleting image ${imageId}`);
     
-  if (fetchError || !image) {
-    console.error('Error fetching image to delete:', fetchError);
+    // First get the image to find the storage path
+    const { data: image, error: fetchError } = await supabase
+      .from('images')
+      .select('storage_path')
+      .eq('id', imageId)
+      .single();
+      
+    if (fetchError || !image) {
+      console.error('Error fetching image to delete:', fetchError);
+      return false;
+    }
+    
+    // Delete from storage
+    const { error: storageError } = await supabase.storage
+      .from('images')
+      .remove([image.storage_path]);
+      
+    if (storageError) {
+      console.error('Error deleting image from storage:', storageError);
+      // Continue with database deletion anyway
+    }
+    
+    // Delete from database
+    const { error: dbError } = await supabase
+      .from('images')
+      .delete()
+      .eq('id', imageId);
+      
+    if (dbError) {
+      console.error('Error deleting image from database:', dbError);
+      return false;
+    }
+    
+    return true;
+  } catch (err) {
+    console.error('Exception in deleteImage:', err);
     return false;
   }
-  
-  // Delete from storage
-  const { error: storageError } = await supabase.storage
-    .from('images')
-    .remove([image.storage_path]);
-    
-  if (storageError) {
-    console.error('Error deleting image from storage:', storageError);
-    return false;
-  }
-  
-  // Delete from database
-  const { error: dbError } = await supabase
-    .from('images')
-    .delete()
-    .eq('id', imageId);
-    
-  if (dbError) {
-    console.error('Error deleting image from database:', dbError);
-    return false;
-  }
-  
-  return true;
 } 

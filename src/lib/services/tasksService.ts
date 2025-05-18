@@ -98,25 +98,52 @@ export async function updateTask(
 export async function toggleTaskCompletion(taskId: string, completed: boolean): Promise<Task | null> {
   const completedAt = completed ? new Date().toISOString() : null;
   
-  return await updateTask(taskId, { 
-    completed,
-    completed_at: completedAt
-  });
+  try {
+    console.log(`Toggling task ${taskId} to ${completed ? 'completed' : 'not completed'}`);
+    
+    const { data, error } = await supabase
+      .from('tasks')
+      .update({
+        completed,
+        completed_at: completedAt,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', taskId)
+      .select('*')
+      .single();
+      
+    if (error) {
+      console.error('Error updating task completion:', error);
+      return null;
+    }
+    
+    return data as Task;
+  } catch (err) {
+    console.error('Exception in toggleTaskCompletion:', err);
+    return null;
+  }
 }
 
 // Delete a task
 export async function deleteTask(taskId: string): Promise<boolean> {
-  const { error } = await supabase
-    .from('tasks')
-    .delete()
-    .eq('id', taskId);
+  try {
+    console.log(`Deleting task ${taskId}`);
     
-  if (error) {
-    console.error('Error deleting task:', error);
+    const { error } = await supabase
+      .from('tasks')
+      .delete()
+      .eq('id', taskId);
+      
+    if (error) {
+      console.error('Error deleting task:', error);
+      return false;
+    }
+    
+    return true;
+  } catch (err) {
+    console.error('Exception in deleteTask:', err);
     return false;
   }
-  
-  return true;
 }
 
 // Reschedule a task to a new date

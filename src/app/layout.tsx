@@ -1,3 +1,4 @@
+
 import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
@@ -20,7 +21,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#3B82F6',
+  themeColor: '#FACC15', // Updated to a yellow/gold color for dark theme consistency
 };
 
 export default function RootLayout({
@@ -29,7 +30,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
         {children}
         <Toaster />

@@ -65,7 +65,7 @@ const MyCustomDayContent: FC<MyCustomDayContentProps> = ({ date, displayMonth, a
 
       {/* Middle part: Image */}
       {dayData?.imageUrl && (
-        <div className="relative w-full h-16 md:h-20 lg:h-24 my-0.5 overflow-hidden rounded shadow-sm border border-border/50">
+        <div className="relative w-full h-16 sm:h-18 md:h-20 lg:h-24 my-0.5 overflow-hidden rounded shadow-sm border border-border/50">
           <Image
             src={dayData.imageUrl} 
             alt={`Content for ${format(date, 'yyyy-MM-dd')}`}
@@ -84,7 +84,7 @@ const MyCustomDayContent: FC<MyCustomDayContentProps> = ({ date, displayMonth, a
         </div>
       )}
       {!dayData?.imageUrl && (
-         <div className="relative w-full h-16 md:h-20 lg:h-24 my-0.5 overflow-hidden rounded flex items-center justify-center bg-muted/20">
+         <div className="relative w-full h-16 sm:h-18 md:h-20 lg:h-24 my-0.5 overflow-hidden rounded flex items-center justify-center bg-muted/20">
             <span className="text-muted-foreground/50 text-[10px]">No image</span>
          </div>
       )}
@@ -110,16 +110,16 @@ const MyCustomDayContent: FC<MyCustomDayContentProps> = ({ date, displayMonth, a
 
 const CalendarView: FC<CalendarViewProps> = ({ selectedDate, onDateChange, appData }) => {
   return (
-    <Card className="shadow-lg w-full bg-card text-card-foreground">
+    <Card className="shadow-lg w-full h-full bg-card text-card-foreground flex flex-col">
       <CardHeader>
         <CardTitle className="text-xl font-semibold text-primary">My daily calendar</CardTitle>
       </CardHeader>
-      <CardContent className="p-2 md:p-3">
+      <CardContent className="p-2 md:p-3 flex-grow">
         <Calendar
           mode="single"
           selected={selectedDate}
           onSelect={onDateChange}
-          className="rounded-md border-0 w-full"
+          className="rounded-md border-0 w-full h-full" // Ensure calendar takes full height of its container
           disabled={(date) => date > new Date() || date < new Date(new Date().setFullYear(new Date().getFullYear() - 5))} 
           components={{
             DayContent: (dayProps: React.ComponentProps<typeof Calendar>['components']['DayContent'] extends ((props: infer P) => any) ? P : never) => (
@@ -132,8 +132,8 @@ const CalendarView: FC<CalendarViewProps> = ({ selectedDate, onDateChange, appDa
             ),
           }}
           classNames={{
-            months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
-            month: "space-y-2 w-full",
+            months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0 h-full",
+            month: "space-y-2 w-full flex flex-col h-full", // Ensure month takes full height
             caption: "flex justify-center pt-1 relative items-center text-card-foreground",
             caption_label: "text-lg font-medium",
             nav: "space-x-1 flex items-center",
@@ -143,21 +143,22 @@ const CalendarView: FC<CalendarViewProps> = ({ selectedDate, onDateChange, appDa
             ),
             nav_button_previous: "absolute left-1",
             nav_button_next: "absolute right-1",
-            table: "w-full border-collapse",
+            table: "w-full border-collapse flex-grow flex flex-col", // Ensure table takes remaining height
             head_row: "flex w-full mb-1",
             head_cell: "text-muted-foreground rounded-md w-[14.2857%] font-normal text-xs md:text-sm justify-center flex p-1",
-            row: "flex w-full mt-0",
+            row: "flex w-full mt-0 flex-grow", // Ensure rows can grow
             cell: cn(
-              "h-36 md:h-44 lg:h-52 w-[14.2857%] text-center text-sm p-0.5 relative", 
+              "w-[14.2857%] text-center text-sm p-0.5 relative flex", // Use flex for cell
               "border border-border/50", 
+              // Adjusted cell heights
+              "h-24 sm:h-28 md:h-30 lg:h-32" 
             ),
             day: cn(
               "h-full w-full p-0 font-normal focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm",
-              // "aria-selected:bg-primary aria-selected:text-primary-foreground" // Handled by MyCustomDayContent
             ),
-            day_selected: "", // Custom styling is now in MyCustomDayContent
-            day_today: "", // Custom styling is now in MyCustomDayContent
-            day_outside: "text-muted-foreground/30 opacity-70", // Make outside days more distinct
+            day_selected: "", 
+            day_today: "", 
+            day_outside: "text-muted-foreground/30 opacity-70",
             day_disabled: "text-muted-foreground/50 opacity-50",
           }}
         />

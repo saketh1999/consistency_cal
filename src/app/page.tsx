@@ -25,29 +25,29 @@ const GRID_LAYOUT_KEY = 'fitPlanCanvasGridLayouts';
 // Define initial layouts for different breakpoints
 const initialLayouts: Layouts = {
   lg: [ // 12 columns
-    { i: 'calendar', x: 0, y: 0, w: 7, h: 12, minW: 4, minH: 8, static: false }, // Calendar on the left
-    { i: 'daily', x: 7, y: 0, w: 5, h: 7, minW: 3, minH: 5, static: false },    // Daily content on the right, top
-    { i: 'motivation', x: 7, y: 7, w: 5, h: 5, minW: 3, minH: 4, static: false }, // Motivation on the right, bottom
+    { i: 'calendar', x: 0, y: 0, w: 7, h: 28, minW: 6, minH: 20, static: true }, // Calendar on the left, static and taller
+    { i: 'daily', x: 7, y: 0, w: 5, h: 14, minW: 3, minH: 8, static: false },    // Daily content on the right, top
+    { i: 'motivation', x: 7, y: 14, w: 5, h: 14, minW: 3, minH: 6, static: false }, // Motivation on the right, bottom
   ],
   md: [ // 10 columns
-    { i: 'calendar', x: 0, y: 0, w: 6, h: 12, minW: 4, minH: 8, static: false }, 
-    { i: 'daily', x: 6, y: 0, w: 4, h: 7, minW: 3, minH: 5, static: false },    
-    { i: 'motivation', x: 6, y: 7, w: 4, h: 5, minW: 3, minH: 4, static: false }, 
+    { i: 'calendar', x: 0, y: 0, w: 6, h: 26, minW: 5, minH: 18, static: true }, 
+    { i: 'daily', x: 6, y: 0, w: 4, h: 13, minW: 3, minH: 7, static: false },    
+    { i: 'motivation', x: 6, y: 13, w: 4, h: 13, minW: 3, minH: 5, static: false }, 
   ],
   sm: [ // 6 columns - Single stacked column
-    { i: 'calendar', x: 0, y: 0, w: 6, h: 8, minW: 4, minH: 6, static: false },
-    { i: 'daily', x: 0, y: 8, w: 6, h: 7, minW: 3, minH: 5, static: false },
-    { i: 'motivation', x: 0, y: 15, w: 6, h: 5, minW: 3, minH: 4, static: false },
+    { i: 'calendar', x: 0, y: 0, w: 6, h: 20, minW: 4, minH: 16, static: true },
+    { i: 'daily', x: 0, y: 20, w: 6, h: 10, minW: 3, minH: 7, static: false },
+    { i: 'motivation', x: 0, y: 30, w: 6, h: 10, minW: 3, minH: 5, static: false },
   ],
   xs: [ // 4 columns - Single stacked column
-    { i: 'calendar', x: 0, y: 0, w: 4, h: 7, minW: 3, minH: 5, static: false },
-    { i: 'daily', x: 0, y: 7, w: 4, h: 7, minW: 3, minH: 5, static: false },
-    { i: 'motivation', x: 0, y: 14, w: 4, h: 5, minW: 3, minH: 4, static: false },
+    { i: 'calendar', x: 0, y: 0, w: 4, h: 18, minW: 3, minH: 15, static: true },
+    { i: 'daily', x: 0, y: 18, w: 4, h: 9, minW: 3, minH: 6, static: false },
+    { i: 'motivation', x: 0, y: 27, w: 4, h: 9, minW: 3, minH: 5, static: false },
   ],
   xxs: [ // 2 columns - Single stacked column
-    { i: 'calendar', x: 0, y: 0, w: 2, h: 7, minW: 2, minH: 5, static: false },
-    { i: 'daily', x: 0, y: 7, w: 2, h: 7, minW: 2, minH: 5, static: false },
-    { i: 'motivation', x: 0, y: 14, w: 2, h: 5, minW: 2, minH: 4, static: false },
+    { i: 'calendar', x: 0, y: 0, w: 2, h: 18, minW: 2, minH: 15, static: true },
+    { i: 'daily', x: 0, y: 18, w: 2, h: 9, minW: 2, minH: 6, static: false },
+    { i: 'motivation', x: 0, y: 27, w: 2, h: 9, minW: 2, minH: 5, static: false },
   ],
 };
 
@@ -66,7 +66,6 @@ export default function HomePage() {
     if (savedLayouts) {
       try {
         const parsedLayouts = JSON.parse(savedLayouts);
-        // Basic validation for layout structure
         if (typeof parsedLayouts === 'object' && parsedLayouts !== null) {
           const breakpoints = Object.keys(initialLayouts);
           const isValidLayoutStructure = breakpoints.every(bp => 
@@ -74,24 +73,20 @@ export default function HomePage() {
           );
 
           if (isValidLayoutStructure) {
-            // Ensure all items from initialLayouts are present, adding missing ones if necessary
             const reconciledLayouts = {...initialLayouts};
             for (const bp of breakpoints) {
                 const initialBpLayout = initialLayouts[bp];
                 const savedBpLayout = parsedLayouts[bp] || [];
                 const savedItemsMap = new Map(savedBpLayout.map((item: Layout) => [item.i, item]));
                 
-                reconciledLayouts[bp] = initialBpLayout.map(initialItem => 
-                    savedItemsMap.has(initialItem.i) ? {...initialItem, ...savedItemsMap.get(initialItem.i)} : initialItem
-                );
-
-                // Add any items that were in savedLayout but not in initialLayouts (e.g. from a previous version)
-                // This part could be removed if we strictly want to adhere to current initialLayouts structure
-                // initialBpLayout.forEach(initialItem => {
-                //    if (!reconciledLayouts[bp].find(item => item.i === initialItem.i)) {
-                //       reconciledLayouts[bp].push(initialItem);
-                //    }
-                // });
+                reconciledLayouts[bp] = initialBpLayout.map(initialItem => {
+                    const savedItem = savedItemsMap.get(initialItem.i);
+                    // If initial item is static, force its properties from initialLayouts
+                    if (initialItem.static) {
+                        return initialItem;
+                    }
+                    return savedItem ? {...initialItem, ...savedItem} : initialItem;
+                });
             }
             setLayouts(reconciledLayouts);
           } else {
@@ -126,10 +121,40 @@ export default function HomePage() {
 
   const onLayoutChange = (currentLayout: Layout[], allLayouts: Layouts) => {
     if (isMounted) { 
-      // Prevent saving if allLayouts is empty or malformed, which can happen during initial HMR
       if (Object.keys(allLayouts).length > 0 && Object.values(allLayouts).every(arr => arr.length > 0)) {
-        setLayouts(allLayouts);
-        localStorage.setItem(GRID_LAYOUT_KEY, JSON.stringify(allLayouts));
+        // Filter out static items before saving, so their potentially user-modified state isn't saved
+        const layoutsToSave: Layouts = {};
+        for (const breakpoint in allLayouts) {
+          layoutsToSave[breakpoint] = allLayouts[breakpoint].filter(item => {
+            const initialItemDef = initialLayouts[breakpoint]?.find(initItem => initItem.i === item.i);
+            return !initialItemDef?.static; // Only save if not defined as static in initialLayouts
+          });
+        }
+        // Merge with static items from initialLayouts to ensure they are present for rendering
+        const fullLayoutsToSet = {...initialLayouts};
+         for (const breakpoint in allLayouts) {
+            const savedNonStatic = layoutsToSave[breakpoint] || [];
+            const staticItems = initialLayouts[breakpoint]?.filter(item => item.static) || [];
+            const combined = [...staticItems];
+            savedNonStatic.forEach(snsItem => {
+                if (!combined.find(cItem => cItem.i === snsItem.i)) {
+                    combined.push(snsItem);
+                }
+            });
+            fullLayoutsToSet[breakpoint] = combined;
+        }
+
+        setLayouts(fullLayoutsToSet);
+        // Save only the non-static items' layouts
+        const nonStaticLayoutsForStorage: Layouts = {};
+        Object.keys(allLayouts).forEach(bp => {
+            nonStaticLayoutsForStorage[bp] = allLayouts[bp].filter(item => {
+                const initialBpLayout = initialLayouts[bp as keyof Layouts];
+                const initialItem = initialBpLayout?.find(l => l.i === item.i);
+                return !initialItem?.static;
+            });
+        });
+        localStorage.setItem(GRID_LAYOUT_KEY, JSON.stringify(nonStaticLayoutsForStorage));
       }
     }
   };
@@ -162,13 +187,12 @@ export default function HomePage() {
           rowHeight={30} 
           compactType="vertical" 
           onLayoutChange={onLayoutChange}
-          isDraggable={true}
-          isResizable={true}
+          isDraggable={true} // Default, individual items can override with `static: true`
+          isResizable={true} // Default, individual items can override with `static: true`
           className="min-h-full"
           // draggableHandle=".drag-handle" // Optional: If you want specific drag handles
         >
           <div key="calendar" className="bg-card text-card-foreground rounded-lg shadow-md flex flex-col overflow-hidden">
-            {/* <div className="drag-handle p-2 bg-primary/20 cursor-move">Drag Calendar</div> */}
             <CalendarView
               selectedDate={selectedDate}
               onDateChange={handleDateChange}
@@ -177,7 +201,6 @@ export default function HomePage() {
           </div>
 
           <div key="daily" className="bg-card text-card-foreground rounded-lg shadow-md flex flex-col overflow-hidden">
-             {/* <div className="drag-handle p-2 bg-primary/20 cursor-move">Drag Daily Content</div> */}
             <DailyContentView
               selectedDate={selectedDate}
               data={currentData}
@@ -186,7 +209,6 @@ export default function HomePage() {
           </div>
 
           <div key="motivation" className="bg-card text-card-foreground rounded-lg shadow-md flex flex-col overflow-hidden">
-            {/* <div className="drag-handle p-2 bg-primary/20 cursor-move">Drag Motivation</div> */}
             <MotivationalPromptView currentJournalNotes={currentData?.notes} />
           </div>
         </ResponsiveGridLayout>
@@ -202,5 +224,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-    

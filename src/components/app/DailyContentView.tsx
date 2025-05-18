@@ -25,7 +25,7 @@ interface DailyContentViewProps {
 
 const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDataChange }) => {
   const [notes, setNotes] = useState('');
-  const [imageUrls, setImageUrls] = useState<string[]>([]); // Changed from imageDataUri
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [videoUrls, setVideoUrls] = useState<string[]>([]);
   const [currentVideoUrlInput, setCurrentVideoUrlInput] = useState('');
   const [todos, setTodos] = useState<TodoItem[]>([]);
@@ -43,7 +43,17 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
 
   useEffect(() => {
     setNotes(data?.notes || '');
-    setImageUrls(data?.imageUrls || []); // Changed from data?.imageUrl
+
+    const loadedImageUrls = data?.imageUrls;
+    if (Array.isArray(loadedImageUrls)) {
+      setImageUrls(loadedImageUrls);
+    } else if (typeof loadedImageUrls === 'string' && loadedImageUrls.startsWith('data:image')) {
+      // Handle case where it might have been a single string URI from a previous version
+      setImageUrls([loadedImageUrls]);
+    } else {
+      setImageUrls([]);
+    }
+
     setVideoUrls(data?.videoUrls || []);
     setCurrentVideoUrlInput('');
     setTodos(data?.todos || []);
@@ -60,13 +70,13 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
           variant: "destructive",
         });
         if (fileInputRef.current) {
-          fileInputRef.current.value = "";
+          fileInputRef.current.value = ""; // Clear the file input if the file is too large
         }
         return;
       }
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImageUrls(prevUrls => [...prevUrls, reader.result as string]); // Add to array
+        setImageUrls(prevUrls => [...prevUrls, reader.result as string]);
       };
       reader.onerror = () => {
         toast({
@@ -77,7 +87,7 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
       };
       reader.readAsDataURL(file);
     }
-  }, [toast]);
+  }, [toast, setImageUrls]); // Added setImageUrls to dependency array
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -88,9 +98,8 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
 
   const handleRemoveImage = (indexToRemove: number) => {
     setImageUrls(prevUrls => prevUrls.filter((_, index) => index !== indexToRemove));
-    if (fileInputRef.current) {
-      // If all images are removed, reset the file input, though it's less critical with multiple files.
-      if (imageUrls.length === 1) fileInputRef.current.value = "";
+    if (fileInputRef.current && imageUrls.length -1 === 0) { // if it was the last image
+        fileInputRef.current.value = "";
     }
     toast({ title: "Image Removed", description: "The image has been cleared. Save to confirm." });
   };
@@ -134,7 +143,7 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
       const dateKey = format(selectedDate, 'yyyy-MM-dd');
       onDataChange(dateKey, {
         notes,
-        imageUrls, // Save array of image URLs
+        imageUrls,
         videoUrls,
         todos,
         importantEvents
@@ -153,12 +162,17 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
   const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
+    // Only set to false if not dragging over a child element
+    if (e.currentTarget.contains(e.relatedTarget as Node)) {
+      return;
+    }
     setIsDraggingOver(false);
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
+    setIsDraggingOver(true); // Ensure it stays true while hovering
   };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -168,7 +182,7 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
       if (files[0].type.startsWith('image/')) {
-        processImageFile(files[0]); // Will add to the array
+        processImageFile(files[0]);
       } else {
         toast({
           title: "Invalid File Type",
@@ -217,7 +231,7 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
 
         {/* Image Upload Section - Updated for multiple images */}
         <div className="space-y-2">
-          <Label htmlFor="imageUpload" className="flex items-center gap-2 font-medium text-primary">
+          <Label htmlFor="imageUploadTrigger" className="flex items-center gap-2 font-medium text-primary">
             <ImageIcon className="h-5 w-5" />
             Images ({imageUrls.length})
           </Label>
@@ -225,14 +239,18 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
             className={cn(
               "relative mt-2 overflow-hidden rounded-lg border border-border shadow-sm flex flex-col items-center justify-center bg-muted/30 p-4 transition-all duration-200",
               isDraggingOver && "border-primary ring-2 ring-primary shadow-lg",
-              imageUrls.length > 0 && "border-transparent", 
-              imageUrls.length === 0 && "min-h-[150px]" // Ensure drop zone has some height when empty
+              imageUrls.length === 0 && "min-h-[150px] cursor-pointer"
             )}
             onDragEnter={handleDragEnter}
             onDragLeave={handleDragLeave}
             onDragOver={handleDragOver}
             onDrop={handleDrop}
-            onClick={() => imageUrls.length === 0 && fileInputRef.current?.click()} // Allow click on empty area
+            onClick={() => {
+              // Only trigger file input if clicking on the empty drop zone placeholder
+              if (imageUrls.length === 0 && fileInputRef.current) {
+                fileInputRef.current.click();
+              }
+            }}
           >
             {imageUrls.length === 0 && (
               <div className="flex flex-col items-center justify-center text-center pointer-events-none">
@@ -244,19 +262,20 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
               </div>
             )}
           </div>
-          {/* Hidden file input */}
+          {/* Hidden file input, id should match label's htmlFor if label is used for clicking */}
           <Input
-            id="imageUpload"
+            id="imageUpload" // This ID is not directly used by a label for clicking now
             type="file"
             accept="image/*"
             ref={fileInputRef}
             onChange={handleImageChange}
             className="sr-only"
-            onClick={(event) => { (event.target as HTMLInputElement).value = '' }}
+            onClick={(event) => { (event.target as HTMLInputElement).value = '' }} // Resets to allow re-uploading same file
           />
            {/* Button to trigger file input, shown below the drop zone */}
-          <Button 
-              variant="outline" 
+          <Button
+              id="imageUploadTrigger" // Label above points to this
+              variant="outline"
               className="w-full mt-2 border-primary text-primary hover:bg-primary/10"
               onClick={() => fileInputRef.current?.click()}
             >
@@ -275,14 +294,15 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
                     className="rounded-md border border-border"
                     data-ai-hint="journal entry"
                     onError={(e) => {
-                      e.currentTarget.src = `https://placehold.co/150x100.png?text=Invalid`;
+                      const target = e.target as HTMLImageElement;
+                      target.src = `https://placehold.co/150x100.png?text=Invalid`;
                       toast({title: "Image Load Error", description: "Could not display an uploaded image.", variant: "destructive"})
                     }}
                   />
-                  <Button 
-                    variant="destructive" 
-                    size="icon" 
-                    onClick={() => handleRemoveImage(index)} 
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    onClick={() => handleRemoveImage(index)}
                     aria-label={`Remove image ${index + 1}`}
                     className="absolute top-1 right-1 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 hover:bg-destructive/80 border-destructive/50"
                   >
@@ -299,7 +319,7 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
         <div className="space-y-2">
           <Label htmlFor="videoUrlInput" className="flex items-center gap-2 font-medium text-primary">
              <VideoIcon className="h-5 w-5" />
-            YouTube Videos
+            YouTube Videos ({videoUrls.length})
           </Label>
           <div className="flex gap-2">
             <Input
@@ -316,7 +336,7 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
             </Button>
           </div>
           {videoUrls.length > 0 && (
-            <div className="space-y-3 mt-2">
+            <div className="space-y-3 mt-2 max-h-60 overflow-y-auto">
               {videoUrls.map((url, index) => {
                 const embedId = extractYoutubeEmbedId(url);
                 return (
@@ -329,7 +349,7 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
                         <Trash2Icon className="h-4 w-4" />
                       </Button>
                     </div>
-                    {embedId && <YoutubeEmbed embedId={embedId} />}
+                    {embedId ? <YoutubeEmbed embedId={embedId} /> : <p className="text-xs text-destructive">Invalid YouTube URL or embed ID not found.</p>}
                   </div>
                 );
               })}
@@ -341,7 +361,7 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
         <div className="space-y-3">
           <Label htmlFor="todoInput" className="flex items-center gap-2 font-medium text-primary">
             <ListChecksIcon className="h-5 w-5" />
-            To-Do List
+            To-Do List ({todos.filter(t => !t.completed).length} remaining)
           </Label>
           <div className="flex gap-2">
             <Input
@@ -413,3 +433,5 @@ const DailyContentView: FC<DailyContentViewProps> = ({ selectedDate, data, onDat
 };
 
 export default DailyContentView;
+
+    

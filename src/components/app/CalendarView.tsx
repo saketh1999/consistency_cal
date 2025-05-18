@@ -2,7 +2,7 @@
 'use client';
 
 import type { FC } from 'react';
-import Image from 'next/image'; // Added import for Next.js Image component
+import Image from 'next/image';
 import { format, parseISO } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import type { CalendarProps as DayPickerCalendarProps } from 'react-day-picker';
@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { AppData } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { buttonVariants } from '@/components/ui/button';
-import { NotebookTextIcon, VideoIcon } from 'lucide-react'; // ImageIcon removed as image presence is now visual
+import { NotebookTextIcon, VideoIcon, ListChecksIcon, AlertTriangleIcon } from 'lucide-react';
 
 interface CalendarViewProps {
   selectedDate: Date | undefined;
@@ -40,6 +40,8 @@ const MyCustomDayContent: FC<MyCustomDayContentProps> = ({ date, displayMonth, a
   const dayData = appData[dateKey];
   const isSelected = selectedDateUI && format(selectedDateUI, 'yyyy-MM-dd') === dateKey;
   const isToday = format(new Date(), 'yyyy-MM-dd') === dateKey;
+  const hasTodos = dayData?.todos && dayData.todos.length > 0;
+  const hasIncompleteTodos = dayData?.todos?.some(todo => !todo.completed);
 
   return (
     <div
@@ -51,7 +53,7 @@ const MyCustomDayContent: FC<MyCustomDayContentProps> = ({ date, displayMonth, a
     >
       {/* Top part: Day number */}
       <div className={cn(
-          "self-end font-semibold text-sm mb-0.5", // Reduced margin slightly
+          "self-end font-semibold text-sm mb-0.5", 
           isSelected && "text-primary",
           isToday && !isSelected && "text-accent"
         )}
@@ -63,14 +65,13 @@ const MyCustomDayContent: FC<MyCustomDayContentProps> = ({ date, displayMonth, a
       {dayData?.imageUrl && (
         <div className="relative w-full h-16 md:h-20 lg:h-24 my-0.5 overflow-hidden rounded shadow-sm border border-border/50">
           <Image
-            src={dayData.imageUrl}
+            src={dayData.imageUrl} // This is now a data URI
             alt={`Content for ${format(date, 'yyyy-MM-dd')}`}
             layout="fill"
             objectFit="cover"
             className="rounded"
             data-ai-hint="diary event"
             onError={(e) => {
-              // Attempt to cast currentTarget to HTMLImageElement to access src
               const target = e.currentTarget as HTMLImageElement;
               if (target) {
                 target.src = `https://placehold.co/150x100.png?text=Error`;
@@ -80,25 +81,22 @@ const MyCustomDayContent: FC<MyCustomDayContentProps> = ({ date, displayMonth, a
           />
         </div>
       )}
-      {!dayData?.imageUrl && ( // Placeholder if no image
+      {!dayData?.imageUrl && (
          <div className="relative w-full h-16 md:h-20 lg:h-24 my-0.5 overflow-hidden rounded flex items-center justify-center bg-muted/20">
             <span className="text-muted-foreground/50 text-[10px]">No image</span>
          </div>
       )}
 
-
       {/* Bottom part: Icons and Notes snippet */}
-      <div className="w-full mt-auto pt-0.5"> {/* Ensure this part is at the bottom */}
-        <div className="flex items-center justify-between w-full">
-            {dayData && (dayData.notes || dayData.videoUrl) && (
-            <div className="flex flex-wrap gap-1">
-                {dayData.notes && <NotebookTextIcon className="h-3.5 w-3.5 text-primary/70" title="Notes" />}
-                {dayData.videoUrl && <VideoIcon className="h-3.5 w-3.5 text-primary/70" title="Video" />}
-            </div>
-            )}
+      <div className="w-full mt-auto pt-0.5">
+        <div className="flex items-center justify-start flex-wrap gap-1.5 mb-0.5">
+            {dayData?.notes && <NotebookTextIcon className="h-3.5 w-3.5 text-primary/70" title="Notes" />}
+            {dayData?.videoUrl && <VideoIcon className="h-3.5 w-3.5 text-primary/70" title="Video" />}
+            {hasTodos && <ListChecksIcon className={cn("h-3.5 w-3.5", hasIncompleteTodos ? "text-orange-500" : "text-green-500")} title="To-Do List" />}
+            {dayData?.importantEvents && <AlertTriangleIcon className="h-3.5 w-3.5 text-red-500" title="Important Event" />}
         </div>
         {dayData?.notes && (
-           <p className="text-[10px] w-full text-left text-muted-foreground/90 truncate overflow-hidden self-end mt-0.5">
+           <p className="text-[10px] w-full text-left text-muted-foreground/90 truncate overflow-hidden self-end">
              {dayData.notes}
            </p>
         )}
@@ -112,7 +110,7 @@ const CalendarView: FC<CalendarViewProps> = ({ selectedDate, onDateChange, appDa
   const markedDays = Object.keys(appData)
     .filter(dateKey => {
         const data = appData[dateKey];
-        return data && (data.notes || data.imageUrl || data.videoUrl);
+        return data && (data.notes || data.imageUrl || data.videoUrl || (data.todos && data.todos.length > 0) || data.importantEvents);
     })
     .map(dateKey => parseISO(dateKey));
 
@@ -127,7 +125,7 @@ const CalendarView: FC<CalendarViewProps> = ({ selectedDate, onDateChange, appDa
           selected={selectedDate}
           onSelect={onDateChange}
           className="rounded-md border-0 w-full"
-          disabled={(date) => date > new Date()}
+          disabled={(date) => date > new Date() || date < new Date(new Date().setFullYear(new Date().getFullYear() - 5))} // Disable future dates and dates more than 5 years ago
           components={{
             DayContent: (dayProps: React.ComponentProps<typeof Calendar>['components']['DayContent'] extends ((props: infer P) => any) ? P : never) => (
               <MyCustomDayContent
@@ -155,15 +153,15 @@ const CalendarView: FC<CalendarViewProps> = ({ selectedDate, onDateChange, appDa
             head_cell: "text-muted-foreground rounded-md w-[14.2857%] font-normal text-xs md:text-sm justify-center flex p-1",
             row: "flex w-full mt-0",
             cell: cn(
-              "h-28 md:h-36 lg:h-44 w-[14.2857%] text-center text-sm p-0.5 relative", // Increased height slightly
+              "h-32 md:h-40 lg:h-48 w-[14.2857%] text-center text-sm p-0.5 relative", // Adjusted height
               "border border-border/30",
             ),
             day: cn(
               "h-full w-full p-0 font-normal focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm",
               "aria-selected:bg-transparent aria-selected:text-foreground",
             ),
-            day_selected: "",
-            day_today: "",
+            day_selected: "", 
+            day_today: "", 
             day_outside: "text-muted-foreground/30",
             day_disabled: "text-muted-foreground/50 opacity-50",
           }}
@@ -174,5 +172,3 @@ const CalendarView: FC<CalendarViewProps> = ({ selectedDate, onDateChange, appDa
 };
 
 export default CalendarView;
-
-    

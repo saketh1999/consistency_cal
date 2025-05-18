@@ -2,6 +2,7 @@
 'use client';
 
 import type { FC } from 'react';
+import Image from 'next/image'; // Added import for Next.js Image component
 import { format, parseISO } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import type { CalendarProps as DayPickerCalendarProps } from 'react-day-picker';
@@ -9,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { AppData } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { buttonVariants } from '@/components/ui/button';
-import { NotebookTextIcon, ImageIcon, VideoIcon } from 'lucide-react';
+import { NotebookTextIcon, VideoIcon } from 'lucide-react'; // ImageIcon removed as image presence is now visual
 
 interface CalendarViewProps {
   selectedDate: Date | undefined;
@@ -17,12 +18,9 @@ interface CalendarViewProps {
   appData: AppData;
 }
 
-// Define props for our custom day content renderer
-// Includes props from DayPicker's DayContent component (date, displayMonth)
-// plus custom props (appData, selectedDateUI)
 interface MyCustomDayContentProps {
   date: Date;
-  displayMonth: Date; 
+  displayMonth: Date;
   appData: AppData;
   selectedDateUI: Date | undefined;
 }
@@ -51,58 +49,85 @@ const MyCustomDayContent: FC<MyCustomDayContentProps> = ({ date, displayMonth, a
         isToday && !isSelected && "bg-accent/10"
       )}
     >
-      {/* Top part: Day number and icons */}
-      <div>
-        <div className={cn(
-            "self-end font-semibold text-sm mb-1",
-            isSelected && "text-primary",
-            isToday && !isSelected && "text-accent"
-          )}
-        >
-          {format(date, 'd')}
-        </div>
-        {dayData && (
-          <div className="flex flex-wrap gap-1.5">
-            {dayData.notes && <NotebookTextIcon className="h-3.5 w-3.5 text-primary/70" title="Notes" />}
-            {dayData.imageUrl && <ImageIcon className="h-3.5 w-3.5 text-primary/70" title="Image" />}
-            {dayData.videoUrl && <VideoIcon className="h-3.5 w-3.5 text-primary/70" title="Video" />}
-          </div>
+      {/* Top part: Day number */}
+      <div className={cn(
+          "self-end font-semibold text-sm mb-0.5", // Reduced margin slightly
+          isSelected && "text-primary",
+          isToday && !isSelected && "text-accent"
         )}
+      >
+        {format(date, 'd')}
       </div>
 
-      {/* Bottom part: Notes snippet */}
-      {dayData?.notes && (
-         <p className="text-[10px] w-full text-left text-muted-foreground/90 truncate overflow-hidden self-end">
-           {dayData.notes}
-         </p>
+      {/* Middle part: Image */}
+      {dayData?.imageUrl && (
+        <div className="relative w-full h-16 md:h-20 lg:h-24 my-0.5 overflow-hidden rounded shadow-sm border border-border/50">
+          <Image
+            src={dayData.imageUrl}
+            alt={`Content for ${format(date, 'yyyy-MM-dd')}`}
+            layout="fill"
+            objectFit="cover"
+            className="rounded"
+            data-ai-hint="diary event"
+            onError={(e) => {
+              // Attempt to cast currentTarget to HTMLImageElement to access src
+              const target = e.currentTarget as HTMLImageElement;
+              if (target) {
+                target.src = `https://placehold.co/150x100.png?text=Error`;
+                target.alt = 'Error loading image';
+              }
+            }}
+          />
+        </div>
       )}
+      {!dayData?.imageUrl && ( // Placeholder if no image
+         <div className="relative w-full h-16 md:h-20 lg:h-24 my-0.5 overflow-hidden rounded flex items-center justify-center bg-muted/20">
+            <span className="text-muted-foreground/50 text-[10px]">No image</span>
+         </div>
+      )}
+
+
+      {/* Bottom part: Icons and Notes snippet */}
+      <div className="w-full mt-auto pt-0.5"> {/* Ensure this part is at the bottom */}
+        <div className="flex items-center justify-between w-full">
+            {dayData && (dayData.notes || dayData.videoUrl) && (
+            <div className="flex flex-wrap gap-1">
+                {dayData.notes && <NotebookTextIcon className="h-3.5 w-3.5 text-primary/70" title="Notes" />}
+                {dayData.videoUrl && <VideoIcon className="h-3.5 w-3.5 text-primary/70" title="Video" />}
+            </div>
+            )}
+        </div>
+        {dayData?.notes && (
+           <p className="text-[10px] w-full text-left text-muted-foreground/90 truncate overflow-hidden self-end mt-0.5">
+             {dayData.notes}
+           </p>
+        )}
+      </div>
     </div>
   );
 };
 
 
 const CalendarView: FC<CalendarViewProps> = ({ selectedDate, onDateChange, appData }) => {
-  // markedDays might not be strictly necessary if CustomDayContent provides enough visual cues.
-  // Kept for potential future use or if a simpler marking style is desired alongside custom content.
   const markedDays = Object.keys(appData)
     .filter(dateKey => {
         const data = appData[dateKey];
         return data && (data.notes || data.imageUrl || data.videoUrl);
     })
     .map(dateKey => parseISO(dateKey));
-  
+
   return (
     <Card className="shadow-lg w-full">
       <CardHeader>
-        <CardTitle className="text-xl font-semibold">My FitPlan Calendar</CardTitle>
+        <CardTitle className="text-xl font-semibold">My daily calendar</CardTitle>
       </CardHeader>
       <CardContent className="p-2 md:p-3">
         <Calendar
           mode="single"
           selected={selectedDate}
           onSelect={onDateChange}
-          className="rounded-md border-0 w-full" 
-          disabled={(date) => date > new Date()} // Optional: Disable future dates
+          className="rounded-md border-0 w-full"
+          disabled={(date) => date > new Date()}
           components={{
             DayContent: (dayProps: React.ComponentProps<typeof Calendar>['components']['DayContent'] extends ((props: infer P) => any) ? P : never) => (
               <MyCustomDayContent
@@ -130,18 +155,17 @@ const CalendarView: FC<CalendarViewProps> = ({ selectedDate, onDateChange, appDa
             head_cell: "text-muted-foreground rounded-md w-[14.2857%] font-normal text-xs md:text-sm justify-center flex p-1",
             row: "flex w-full mt-0",
             cell: cn(
-              "h-28 md:h-32 lg:h-40 w-[14.2857%] text-center text-sm p-0.5 relative", 
+              "h-28 md:h-36 lg:h-44 w-[14.2857%] text-center text-sm p-0.5 relative", // Increased height slightly
               "border border-border/30",
             ),
-            day: cn( 
+            day: cn(
               "h-full w-full p-0 font-normal focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm",
-              "aria-selected:bg-transparent aria-selected:text-foreground", 
+              "aria-selected:bg-transparent aria-selected:text-foreground",
             ),
-            day_selected: "", 
-            day_today: "", 
-            day_outside: "text-muted-foreground/30", // Minimal style as MyCustomDayContent handles outside day rendering
+            day_selected: "",
+            day_today: "",
+            day_outside: "text-muted-foreground/30",
             day_disabled: "text-muted-foreground/50 opacity-50",
-            // modifiersStyles.marked is not used as MyCustomDayContent provides richer visuals
           }}
         />
       </CardContent>
@@ -150,3 +174,5 @@ const CalendarView: FC<CalendarViewProps> = ({ selectedDate, onDateChange, appDa
 };
 
 export default CalendarView;
+
+    

@@ -1,6 +1,7 @@
-# Firebase Studio
+# Consistency Calendar
 
-This is a NextJS starter in Firebase Studio.
+A NextJS application with Supabase for backend services.
 
-To get started, take a look at src/app/page.tsx.
-# consistency_cal
+## Setup
+
+Follow the instructions in SUPABASE_SETUP.md to set up your Supabase project.

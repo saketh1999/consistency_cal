@@ -36,4 +36,15 @@ export type Task = {
   is_global: boolean; // If true, task repeats daily
   created_at: string;
   updated_at: string;
+};
+
+export type QuoteEntry = {
+  id: string;
+  user_id: string;
+  text: string;
+  author: string | null;
+  image_url: string | null;
+  date: string; // Format: YYYY-MM-DD
+  created_at: string;
+  updated_at: string;
 }; 

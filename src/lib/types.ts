@@ -32,3 +32,11 @@ export interface AppData {
 export interface FitnessGoals {
   goals?: string;
 }
+
+export interface MotivationalQuote {
+  id: string;
+  text: string;
+  author?: string;
+  imageUrl?: string;
+  dateAdded: string;
+}

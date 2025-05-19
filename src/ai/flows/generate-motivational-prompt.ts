@@ -1,17 +1,16 @@
-// src/ai/flows/generate-motivational-prompt.ts
 'use server';
 
 /**
- * @fileOverview Generates a motivational message based on user's fitness goals and journal entries.
- *
- * - generateMotivationalPrompt - A function that generates a motivational message.
- * - GenerateMotivationalPromptInput - The input type for the generateMotivationalPrompt function.
- * - GenerateMotivationalPromptOutput - The return type for the generateMotivationalPrompt function.
+ * @fileOverview Legacy compatibility layer for motivational prompt generation.
+ * 
+ * This file is kept for compatibility with existing code but no longer 
+ * generates AI-powered motivational messages. The functionality has been 
+ * replaced with user-managed quotes.
  */
 
-import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
+// Keep the input/output types for compatibility
 const GenerateMotivationalPromptInputSchema = z.object({
   fitnessGoals: z
     .string()
@@ -35,32 +34,11 @@ export type GenerateMotivationalPromptOutput = z.infer<
   typeof GenerateMotivationalPromptOutputSchema
 >;
 
+// Provide a compatibility implementation that returns a fixed message
 export async function generateMotivationalPrompt(
-  input: GenerateMotivationalPromptInput
+  _input: GenerateMotivationalPromptInput
 ): Promise<GenerateMotivationalPromptOutput> {
-  return generateMotivationalPromptFlow(input);
-}
-
-const prompt = ai.definePrompt({
-  name: 'generateMotivationalPromptPrompt',
-  input: {schema: GenerateMotivationalPromptInputSchema},
-  output: {schema: GenerateMotivationalPromptOutputSchema},
-  prompt: `You are a personal fitness motivation assistant. Based on the user's fitness goals and their journal entry for the day, generate a motivational message to keep them on track.
-
-Fitness Goals: {{{fitnessGoals}}}
-Journal Entry: {{{journalEntry}}}
-
-Motivational Message:`,
-});
-
-const generateMotivationalPromptFlow = ai.defineFlow(
-  {
-    name: 'generateMotivationalPromptFlow',
-    inputSchema: GenerateMotivationalPromptInputSchema,
-    outputSchema: GenerateMotivationalPromptOutputSchema,
-  },
-  async input => {
-    const {output} = await prompt(input);
-    return output!;
-  }
-);
+  return {
+    motivationalMessage: "This feature has been replaced with user-managed quotes. Please use the new quote management system instead."
+  };
+} 

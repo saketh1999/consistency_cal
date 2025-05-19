@@ -7,7 +7,7 @@ import { Calendar } from '@/components/ui/calendar';
 import type { AppData } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { buttonVariants } from '@/components/ui/button';
-import { NotebookTextIcon, VideoIcon, ListChecksIcon, AlertTriangleIcon, ImageIcon, StarIcon } from 'lucide-react'; // Added StarIcon
+import { NotebookTextIcon, VideoIcon, ListChecksIcon, AlertTriangleIcon, ImageIcon, StarIcon, XCircleIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 
@@ -15,6 +15,8 @@ interface CalendarViewProps {
   selectedDate: Date | undefined;
   onDateChange: (date: Date | undefined) => void;
   appData: AppData;
+  onSetFeaturedImage: (dateKey: string, imageUrl: string | undefined) => void;
+  onDeleteImage: (dateKey: string, imageUrl: string) => void;
 }
 
 interface MyCustomDayContentProps {
@@ -22,9 +24,11 @@ interface MyCustomDayContentProps {
   displayMonth: Date;
   appData: AppData;
   selectedDateUI: Date | undefined;
+  onSetFeaturedImage: (dateKey: string, imageUrl: string | undefined) => void;
+  onDeleteImage: (dateKey: string, imageUrl: string) => void;
 }
 
-const MyCustomDayContent: FC<MyCustomDayContentProps> = ({ date, displayMonth, appData, selectedDateUI }) => {
+const MyCustomDayContent: FC<MyCustomDayContentProps> = ({ date, displayMonth, appData, selectedDateUI, onSetFeaturedImage, onDeleteImage }) => {
   const isOutsideDay = date.getMonth() !== displayMonth.getMonth();
 
   if (isOutsideDay) {
@@ -50,6 +54,34 @@ const MyCustomDayContent: FC<MyCustomDayContentProps> = ({ date, displayMonth, a
     ? dayData!.featuredImageUrl 
     : (hasImages ? dayData!.imageUrls![0] : undefined);
 
+  const allImageUrls = dayData?.imageUrls || [];
+  const isCurrentlyFeatured = displayImageUrl === dayData?.featuredImageUrl;
+
+  const handleSetFeatured = () => {
+    if (!displayImageUrl) return;
+
+    if (isCurrentlyFeatured) {
+      // If current is featured, and other images exist, make the next one featured
+      const currentIndex = allImageUrls.findIndex(url => url === displayImageUrl);
+      if (allImageUrls.length > 1) {
+        const nextIndex = (currentIndex + 1) % allImageUrls.length;
+        onSetFeaturedImage(dateKey, allImageUrls[nextIndex]);
+      } else {
+        // Only one image, and it's featured. Unset it.
+         onSetFeaturedImage(dateKey, undefined);
+      }
+    } else {
+      // If current is not featured, make it featured
+      onSetFeaturedImage(dateKey, displayImageUrl);
+    }
+  };
+
+  const handleDeleteImage = () => {
+    if (displayImageUrl) {
+      onDeleteImage(dateKey, displayImageUrl);
+    }
+  };
+
   return (
     <div
       className={cn(
@@ -71,7 +103,7 @@ const MyCustomDayContent: FC<MyCustomDayContentProps> = ({ date, displayMonth, a
 
       {/* Middle part: Image */}
       {displayImageUrl ? (
-        <div className="relative w-full h-16 sm:h-18 md:h-20 lg:h-24 my-0.5 overflow-hidden rounded shadow-sm border border-border/50">
+        <div className="relative w-full h-16 sm:h-18 md:h-20 lg:h-24 my-0.5 overflow-hidden rounded shadow-sm border border-border/50 group">
           <Image
             src={displayImageUrl} 
             alt={`Content for ${format(date, 'yyyy-MM-dd')}`}
@@ -101,9 +133,36 @@ const MyCustomDayContent: FC<MyCustomDayContentProps> = ({ date, displayMonth, a
               <ImageIcon size={10} className="mr-0.5" /> +{dayData!.imageUrls!.length - 1}
             </div>
           )}
+          
+          {/* Image management icons - shown on hover of the image container */}
+          {displayImageUrl && (
+            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 p-1">
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={(e) => { e.stopPropagation(); handleSetFeatured(); }}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); handleSetFeatured(); } }}
+                title={isCurrentlyFeatured ? (allImageUrls.length > 1 ? "Cycle Featured" : "Unset Featured") : "Set as Featured"}
+                className="p-1.5 bg-black/70 rounded-full text-white hover:bg-yellow-500 disabled:opacity-50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                aria-disabled={allImageUrls.length === 0}
+              >
+                <StarIcon className={`w-4 h-4 ${isCurrentlyFeatured ? "text-yellow-400 fill-yellow-400" : "text-white"} ${allImageUrls.length === 0 ? "opacity-50" : ""}`} />
+              </div>
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={(e) => { e.stopPropagation(); handleDeleteImage(); }}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); handleDeleteImage(); } }}
+                title="Delete Image"
+                className="p-1.5 bg-black/70 rounded-full text-white hover:bg-red-500 cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-400"
+              >
+                <XCircleIcon className="w-4 h-4" />
+              </div>
+            </div>
+          )}
         </div>
       ) : (
-         <div className="relative w-full h-16 sm:h-18 md:h-20 lg:h-24 my-0.5 overflow-hidden rounded flex items-center justify-center bg-muted/20">
+         <div className="relative w-full h-16 sm:h-18 md:h-20 lg:h-24 my-0.5 overflow-hidden rounded flex items-center justify-center bg-muted/20 group">
             <span className="text-muted-foreground/50 text-[10px]">No image</span>
          </div>
       )}
@@ -128,7 +187,7 @@ const MyCustomDayContent: FC<MyCustomDayContentProps> = ({ date, displayMonth, a
 };
 
 
-const CalendarView: FC<CalendarViewProps> = ({ selectedDate, onDateChange, appData }) => {
+const CalendarView: FC<CalendarViewProps> = ({ selectedDate, onDateChange, appData, onSetFeaturedImage, onDeleteImage }) => {
   return (
     <Card className="shadow-lg w-full h-full bg-card text-card-foreground flex flex-col">
       <CardHeader>
@@ -140,7 +199,7 @@ const CalendarView: FC<CalendarViewProps> = ({ selectedDate, onDateChange, appDa
           selected={selectedDate}
           onSelect={onDateChange}
           className="rounded-md border-0 w-full h-full" 
-          disabled={(date) => date > new Date() || date < new Date(new Date().setFullYear(new Date().getFullYear() - 5))} 
+          disabled={(date) => date < new Date(new Date().setFullYear(new Date().getFullYear() - 5))}
           components={{
             DayContent: (dayProps) => (
               <MyCustomDayContent
@@ -148,6 +207,8 @@ const CalendarView: FC<CalendarViewProps> = ({ selectedDate, onDateChange, appDa
                 displayMonth={dayProps.displayMonth}
                 appData={appData}
                 selectedDateUI={selectedDate}
+                onSetFeaturedImage={onSetFeaturedImage}
+                onDeleteImage={onDeleteImage}
               />
             ),
           }}

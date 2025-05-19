@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, startOfDay, isBefore } from 'date-fns';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { DailyEntry } from '@/lib/supabase';
 import { getDailyEntry, saveDailyEntry } from '@/lib/services/dailyEntriesService';
@@ -42,6 +42,9 @@ const DailyContentView: React.FC<DailyContentViewProps> = ({ selectedDate, data:
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isComponentMounted, setIsComponentMounted] = useState(false);
+
+  // Determine if the selected date is in the past and should be read-only
+  const isReadOnly = false; // Always allow editing
 
   // State for all module data
   const [notes, setNotes] = useState('');
@@ -313,6 +316,7 @@ const DailyContentView: React.FC<DailyContentViewProps> = ({ selectedDate, data:
                             onNotesChange={setNotes}
                             defaultOpen={module.defaultOpen}
                             initialExpanded={module.initialExpanded}
+                            isReadOnly={isReadOnly}
                           />
                         )}
                         
@@ -327,6 +331,7 @@ const DailyContentView: React.FC<DailyContentViewProps> = ({ selectedDate, data:
                             setFeaturedImageUrl={setFeaturedImageUrl}
                             defaultOpen={module.defaultOpen}
                             initialExpanded={module.initialExpanded}
+                            isReadOnly={isReadOnly}
                           />
                         )}
                         
@@ -336,6 +341,7 @@ const DailyContentView: React.FC<DailyContentViewProps> = ({ selectedDate, data:
                             onVideoUrlsChange={setVideoUrls}
                             defaultOpen={module.defaultOpen}
                             initialExpanded={module.initialExpanded}
+                            isReadOnly={isReadOnly}
                           />
                         )}
                         
@@ -347,6 +353,7 @@ const DailyContentView: React.FC<DailyContentViewProps> = ({ selectedDate, data:
                             setTodos={setTodos}
                             defaultOpen={module.defaultOpen}
                             initialExpanded={module.initialExpanded}
+                            isReadOnly={isReadOnly}
                           />
                         )}
                         
@@ -356,6 +363,7 @@ const DailyContentView: React.FC<DailyContentViewProps> = ({ selectedDate, data:
                             onImportantEventsChange={setImportantEvents}
                             defaultOpen={module.defaultOpen}
                             initialExpanded={module.initialExpanded}
+                            isReadOnly={isReadOnly}
                           />
                         )}
                         
@@ -365,6 +373,7 @@ const DailyContentView: React.FC<DailyContentViewProps> = ({ selectedDate, data:
                             onEventsChange={setGoogleCalendarEvents}
                             defaultOpen={module.defaultOpen}
                             initialExpanded={module.initialExpanded}
+                            isReadOnly={isReadOnly}
                           />
                         )}
                       </div>
@@ -382,7 +391,7 @@ const DailyContentView: React.FC<DailyContentViewProps> = ({ selectedDate, data:
         <Button
           onClick={handleSave}
           className="w-full bg-accent hover:bg-accent/90 text-accent-foreground"
-          disabled={isSaving}
+          disabled={isSaving || isReadOnly}
         >
           {isSaving ? (
             <>

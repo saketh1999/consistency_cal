@@ -26,6 +26,7 @@ interface ImageUploadModuleProps {
   setFeaturedImageUrl?: (url: string | undefined) => void;
   defaultOpen?: boolean;
   initialExpanded?: boolean;
+  isReadOnly?: boolean;
 }
 
 const ImageUploadModule = ({ 
@@ -37,7 +38,8 @@ const ImageUploadModule = ({
   featuredImageUrl,
   setFeaturedImageUrl,
   defaultOpen = true,
-  initialExpanded = true
+  initialExpanded = true,
+  isReadOnly = false
 }: ImageUploadModuleProps) => {
   const [isOpen, setIsOpen] = useState<boolean>(initialExpanded);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
@@ -70,6 +72,17 @@ const ImageUploadModule = ({
 
   // Process and upload image file
   const processImageFile = useCallback(async (file: File) => {
+    if (isReadOnly) {
+      toast({
+        title: "Read-Only",
+        description: "Cannot upload images for a past date.",
+        variant: "default",
+      });
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ""; // Clear the input if an attempt was made
+      }
+      return;
+    }
     if (!file || !selectedDate || !userId) return;
     
     if (file.size > 5 * 1024 * 1024) { // 5MB limit
@@ -146,7 +159,7 @@ const ImageUploadModule = ({
         fileInputRef.current.value = "";
       }
     }
-  }, [selectedDate, userId, dailyEntryId, images, imageUrls, setImageUrls, featuredImageUrl, setFeaturedImageUrl, toast]);
+  }, [selectedDate, userId, dailyEntryId, images, imageUrls, setImageUrls, featuredImageUrl, setFeaturedImageUrl, toast, isReadOnly]);
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -160,6 +173,14 @@ const ImageUploadModule = ({
   };
 
   const handleRemoveImage = async (index: number) => {
+    if (isReadOnly) {
+      toast({
+        title: "Read-Only",
+        description: "Cannot remove images from a past date.",
+        variant: "default",
+      });
+      return;
+    }
     const imageToDelete = images[index];
     if (!imageToDelete) return;
     
@@ -206,6 +227,14 @@ const ImageUploadModule = ({
   };
 
   const handleSetFeatured = (url: string) => {
+    if (isReadOnly) {
+      toast({
+        title: "Read-Only",
+        description: "Cannot change the featured image for a past date.",
+        variant: "default",
+      });
+      return;
+    }
     if (setFeaturedImageUrl) {
       setFeaturedImageUrl(url);
       
@@ -298,7 +327,7 @@ const ImageUploadModule = ({
     <Collapsible open={isOpen} onOpenChange={setIsOpen} defaultOpen={defaultOpen} className="relative w-full bg-card rounded-md">
       <div className="flex items-center justify-between p-3 border-b border-border">
         <div className="flex items-center gap-2">
-          <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" />
+          {!isReadOnly && <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" />}
           <Label htmlFor="imageUploadTrigger" className="flex items-center gap-2 font-medium text-primary cursor-pointer">
             <ImageIcon className="h-5 w-5" />
             Images ({imageUrls.length})
@@ -328,60 +357,70 @@ const ImageUploadModule = ({
       
       <CollapsibleContent>
         <div className="p-3 space-y-3">
-          <div
-            className={cn(
-              "relative overflow-hidden rounded-lg border border-border shadow-sm flex flex-col items-center justify-center bg-muted/30 p-4 transition-all duration-200",
-              isDraggingOver && "border-primary ring-2 ring-primary shadow-lg",
-              "min-h-[150px] cursor-pointer hover:bg-muted/50 hover:border-primary/60"
-            )}
-            onDragEnter={handleDragEnter}
-            onDragLeave={handleDragLeave}
-            onDragOver={handleDragOver}
-            onDrop={handleDrop}
-            onClick={handleDropzoneClick}
-            role="button"
-            tabIndex={0}
-            aria-label="Upload image by clicking or dragging and dropping"
-          >
-            {isProcessingImages ? (
-              <div className="flex flex-col items-center justify-center text-center pointer-events-none">
-                <Loader2 className="h-12 w-12 mb-2 text-primary animate-spin" />
-                <p className="text-sm font-medium text-primary">Processing...</p>
+          {!isReadOnly ? (
+            <>
+              <div
+                className={cn(
+                  "relative overflow-hidden rounded-lg border border-border shadow-sm flex flex-col items-center justify-center bg-muted/30 p-4 transition-all duration-200",
+                  isDraggingOver && "border-primary ring-2 ring-primary shadow-lg",
+                  "min-h-[150px] cursor-pointer hover:bg-muted/50 hover:border-primary/60"
+                )}
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                onClick={handleDropzoneClick}
+                role="button"
+                tabIndex={0}
+                aria-label="Upload image by clicking or dragging and dropping"
+              >
+                {isProcessingImages ? (
+                  <div className="flex flex-col items-center justify-center text-center pointer-events-none">
+                    <Loader2 className="h-12 w-12 mb-2 text-primary animate-spin" />
+                    <p className="text-sm font-medium text-primary">Processing...</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-center pointer-events-none">
+                    <UploadCloudIcon className={cn("h-12 w-12 mb-2", isDraggingOver ? "text-primary" : "text-muted-foreground/70")} />
+                    <p className={cn("text-sm font-medium", isDraggingOver ? "text-primary" : "text-muted-foreground/90")}>
+                      {isDraggingOver ? "Drop image here" : "Drag & drop or click to upload"}
+                    </p>
+                    <p className="text-xs text-muted-foreground/70">Max 5MB per image</p>
+                  </div>
+                )}
               </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center text-center pointer-events-none">
-                <UploadCloudIcon className={cn("h-12 w-12 mb-2", isDraggingOver ? "text-primary" : "text-muted-foreground/70")} />
-                <p className={cn("text-sm font-medium", isDraggingOver ? "text-primary" : "text-muted-foreground/90")}>
-                  {isDraggingOver ? "Drop image here" : "Drag & drop or click to upload"}
-                </p>
-                <p className="text-xs text-muted-foreground/70">Max 5MB per image</p>
+              
+              <Input
+                id="imageUpload"
+                type="file"
+                accept="image/*"
+                ref={fileInputRef}
+                onChange={handleImageChange}
+                className="hidden"
+                disabled={isProcessingImages}
+              />
+              
+              <Button
+                id="imageUploadTrigger"
+                variant="outline"
+                className="w-full border-primary text-primary hover:bg-primary/10"
+                onClick={() => {
+                  if (fileInputRef.current) {
+                    fileInputRef.current.click();
+                  }
+                }}
+                disabled={isProcessingImages}
+              >
+                <ImageIcon className="mr-2 h-4 w-4" /> Add Image
+              </Button>
+            </>
+          ) : (
+            imageUrls.length === 0 && (
+              <div className="flex flex-col items-center justify-center min-h-[100px] p-4 bg-muted/20 rounded-md">
+                <p className="text-sm text-muted-foreground">No images available for this date.</p>
               </div>
-            )}
-          </div>
-          
-          <Input
-            id="imageUpload"
-            type="file"
-            accept="image/*"
-            ref={fileInputRef}
-            onChange={handleImageChange}
-            className="hidden"
-            disabled={isProcessingImages}
-          />
-          
-          <Button
-            id="imageUploadTrigger"
-            variant="outline"
-            className="w-full border-primary text-primary hover:bg-primary/10"
-            onClick={() => {
-              if (fileInputRef.current) {
-                fileInputRef.current.click();
-              }
-            }}
-            disabled={isProcessingImages}
-          >
-            <ImageIcon className="mr-2 h-4 w-4" /> Add Image
-          </Button>
+            )
+          )}
 
           {imageUrls.length > 0 && (
             <ScrollArea className="max-h-60">
@@ -403,37 +442,39 @@ const ImageUploadModule = ({
                         toast({title: "Image Load Error", description: "Could not display an uploaded image.", variant: "destructive"})
                       }}
                     />
-                    <div className="absolute top-1 right-1 flex flex-col gap-1">
-                      <Button
-                        variant="destructive"
-                        size="icon"
-                        onClick={() => handleRemoveImage(index)}
-                        aria-label={`Remove image ${index + 1}`}
-                        className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 hover:bg-destructive/80 border-destructive/50"
-                        disabled={isProcessingImages}
-                      >
-                        <XCircleIcon className="h-4 w-4" />
-                      </Button>
-                      
-                      {setFeaturedImageUrl && (
+                    {!isReadOnly && (
+                      <div className="absolute top-1 right-1 flex flex-col gap-1">
                         <Button
-                          variant={featuredImageUrl === url ? "default" : "secondary"}
+                          variant="destructive"
                           size="icon"
-                          onClick={() => handleSetFeatured(url)}
-                          aria-label={`Set as featured image for calendar view`}
-                          className={cn(
-                            "h-7 w-7 transition-opacity",
-                            featuredImageUrl === url 
-                              ? "opacity-100 bg-yellow-500 hover:bg-yellow-600" 
-                              : "opacity-0 group-hover:opacity-100 bg-black/50 hover:bg-yellow-500/80"
-                          )}
-                          disabled={isProcessingImages || featuredImageUrl === url}
-                          title="Set as featured in calendar"
+                          onClick={() => handleRemoveImage(index)}
+                          aria-label={`Remove image ${index + 1}`}
+                          className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 hover:bg-destructive/80 border-destructive/50"
+                          disabled={isProcessingImages}
                         >
-                          <StarIcon className="h-4 w-4" />
+                          <XCircleIcon className="h-4 w-4" />
                         </Button>
-                      )}
-                    </div>
+                        
+                        {setFeaturedImageUrl && (
+                          <Button
+                            variant={featuredImageUrl === url ? "default" : "secondary"}
+                            size="icon"
+                            onClick={() => handleSetFeatured(url)}
+                            aria-label={`Set as featured image for calendar view`}
+                            className={cn(
+                              "h-7 w-7 transition-opacity",
+                              featuredImageUrl === url 
+                                ? "opacity-100 bg-yellow-500 hover:bg-yellow-600" 
+                                : "opacity-0 group-hover:opacity-100 bg-black/50 hover:bg-yellow-500/80"
+                            )}
+                            disabled={isProcessingImages || featuredImageUrl === url}
+                            title="Set as featured in calendar"
+                          >
+                            <StarIcon className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    )}
                     {featuredImageUrl === url && (
                       <div className="absolute bottom-1 left-1 bg-yellow-500/80 text-black text-xs px-1.5 py-0.5 rounded-sm flex items-center">
                         <StarIcon className="h-3 w-3 mr-1" /> Featured

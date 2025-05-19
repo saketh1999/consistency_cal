@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,7 @@ interface TodoModuleProps {
   setTodos: (todos: TodoItem[]) => void;
   defaultOpen?: boolean;
   initialExpanded?: boolean;
+  isReadOnly?: boolean;
 }
 
 const TodoModule = ({ 
@@ -32,13 +33,15 @@ const TodoModule = ({
   todos,
   setTodos,
   defaultOpen = true,
-  initialExpanded = true 
+  initialExpanded = true,
+  isReadOnly = false
 }: TodoModuleProps) => {
   const [isOpen, setIsOpen] = useState<boolean>(initialExpanded);
   const [newTodoText, setNewTodoText] = useState('');
   const [dailyTasks, setDailyTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Load tasks when component mounts or when date/user changes
   const loadTasks = useCallback(async () => {
@@ -75,7 +78,10 @@ const TodoModule = ({
     loadTasks();
   }, [loadTasks]);
 
-  const handleAddTodo = async () => {
+  const handleAddTodo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isReadOnly) return;
+
     if (!selectedDate || !userId || !newTodoText.trim()) return;
     
     try {
@@ -119,6 +125,8 @@ const TodoModule = ({
   };
 
   const handleToggleTodo = async (id: string) => {
+    if (isReadOnly) return;
+
     const task = dailyTasks.find(t => t.id === id);
     if (!task) {
       console.error("Task not found for toggle:", id);
@@ -158,6 +166,8 @@ const TodoModule = ({
   };
 
   const handleRemoveTodo = async (id: string) => {
+    if (isReadOnly) return;
+
     try {
       await apiDeleteTask(id);
       
@@ -185,6 +195,8 @@ const TodoModule = ({
   };
 
   const handleToggleGlobalTask = async (id: string) => {
+    if (isReadOnly) return;
+
     const task = dailyTasks.find(t => t.id === id);
     if (!task) return;
     
@@ -223,7 +235,7 @@ const TodoModule = ({
     <Collapsible open={isOpen} onOpenChange={setIsOpen} defaultOpen={defaultOpen} className="relative w-full bg-card rounded-md">
       <div className="flex items-center justify-between p-3 border-b border-border">
         <div className="flex items-center gap-2">
-          <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" />
+          {!isReadOnly && <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" />}
           <Label htmlFor="todoInput" className="flex items-center gap-2 font-medium text-primary cursor-pointer">
             <ListChecksIcon className="h-5 w-5" />
             To-Do List ({todos.filter(t => !t.completed).length} remaining)
@@ -253,26 +265,30 @@ const TodoModule = ({
       
       <CollapsibleContent>
         <div className="p-3 space-y-3">
-          <div className="flex gap-2">
-            <Input
-              id="todoInput"
-              type="text"
-              placeholder="Add a new task..."
-              value={newTodoText}
-              onChange={(e) => setNewTodoText(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleAddTodo()}
-              className="flex-grow bg-input text-foreground placeholder-muted-foreground"
-            />
-            <Button 
-              onClick={handleAddTodo} 
-              variant="outline" 
-              size="icon" 
-              aria-label="Add todo" 
-              className="border-primary text-primary hover:bg-primary/10"
-            >
-              <PlusCircleIcon className="h-5 w-5" />
-            </Button>
-          </div>
+          {!isReadOnly && (
+            <form onSubmit={handleAddTodo} className="flex items-center gap-2">
+              <Input
+                id="todoInput"
+                type="text"
+                placeholder="Add a new task..."
+                value={newTodoText}
+                onChange={(e) => setNewTodoText(e.target.value)}
+                ref={inputRef}
+                onKeyPress={(e) => e.key === 'Enter' && handleAddTodo(e)}
+                className="flex-grow bg-input text-foreground placeholder-muted-foreground"
+              />
+              <Button 
+                type="submit" 
+                variant="outline" 
+                size="icon" 
+                aria-label="Add todo" 
+                className="border-primary text-primary hover:bg-primary/10"
+                disabled={!newTodoText.trim() || isReadOnly}
+              >
+                <PlusCircleIcon className="h-5 w-5" />
+              </Button>
+            </form>
+          )}
           
           {todos.length > 0 ? (
             <ScrollArea className="max-h-40 rounded-md border border-border p-3 bg-background/30">
@@ -290,6 +306,7 @@ const TodoModule = ({
                           onCheckedChange={() => handleToggleTodo(todo.id)}
                           aria-label={todo.text}
                           className="border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+                          disabled={isReadOnly}
                         />
                         <label
                           htmlFor={`todo-${todo.id}`}
@@ -310,6 +327,7 @@ const TodoModule = ({
                           onClick={() => handleToggleGlobalTask(todo.id)} 
                           className="h-6 w-6 hover:bg-accent/10"
                           title={isGlobal ? "Remove from daily tasks" : "Make a daily task"}
+                          disabled={isReadOnly}
                         >
                           <Calendar className="h-3.5 w-3.5 text-accent/80 hover:text-accent" />
                         </Button>
@@ -319,6 +337,7 @@ const TodoModule = ({
                           onClick={() => handleRemoveTodo(todo.id)} 
                           className="h-6 w-6"
                           aria-label="Remove todo"
+                          disabled={isReadOnly}
                         >
                           <Trash2Icon className="h-3.5 w-3.5 text-destructive/70 hover:text-destructive" />
                         </Button>
@@ -331,7 +350,11 @@ const TodoModule = ({
           ) : (
             <div className="flex flex-col items-center justify-center py-4 text-center bg-muted/20 rounded-md">
               <ListChecksIcon className="h-8 w-8 text-muted-foreground mb-2 opacity-50" />
-              <p className="text-sm text-muted-foreground">No tasks yet. Add some!</p>
+              <p className="text-sm text-muted-foreground">
+                {isReadOnly 
+                  ? "No tasks for this date." 
+                  : "Add tasks to your to-do list."}
+              </p>
             </div>
           )}
         </div>

@@ -16,13 +16,15 @@ interface NotesModuleProps {
   onNotesChange: (notes: string) => void;
   defaultOpen?: boolean;
   initialExpanded?: boolean;
+  isReadOnly?: boolean;
 }
 
 const NotesModule = ({ 
   notes, 
   onNotesChange,
   defaultOpen = true,
-  initialExpanded = true 
+  initialExpanded = true,
+  isReadOnly = false
 }: NotesModuleProps) => {
   const [isOpen, setIsOpen] = useState<boolean>(initialExpanded);
 

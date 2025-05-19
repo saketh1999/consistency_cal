@@ -1,17 +1,21 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { format } from 'date-fns';
+import { format, parse } from 'date-fns';
 import CalendarView from '@/components/custom/CalendarView';
 import DailyContentView from '@/components/custom/DailyContentView';
 import MotivationalPromptView from '@/components/custom/MotivationalPromptView';
 import GlobalTodoView from '@/components/custom/GlobalTodoView';
 import GoogleCalendarView from '@/components/custom/GoogleCalendarView';
 import type { AppData, DailyData, TodoItem, GoogleCalendarEvent } from '@/lib/types';
+import type { DailyEntry } from '@/lib/supabase';
 import { loadFromLocalStorage, saveToLocalStorage } from '@/lib/localStorageUtils';
 import { Logo } from '@/components/icons/Logo';
 import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronUp, Move, Maximize, Minimize } from 'lucide-react';
+import { useAuth } from '@/lib/hooks/useAuth';
+import { saveDailyEntry } from '@/lib/services/dailyEntriesService';
+import { useToast } from '@/hooks/use-toast';
 
 const APP_DATA_KEY = 'consistencyAppData';
 const GLOBAL_TODOS_KEY = 'consistencyGlobalTodos';
@@ -70,6 +74,8 @@ export default function HomePage() {
   const [isMounted, setIsMounted] = useState(false);
   const [layoutPrefs, setLayoutPrefs] = useState<LayoutPreferences>(defaultLayoutPreferences);
   const [isEditMode, setIsEditMode] = useState(false);
+  const { user } = useAuth();
+  const { toast } = useToast();
 
   useEffect(() => {
     const loadedAppData = loadFromLocalStorage<AppData>(APP_DATA_KEY, {});
@@ -168,7 +174,7 @@ export default function HomePage() {
     // Update app data
     handleDailyDataChange(dateKey, updatedDailyData);
     
-    // Show toast notification
+    // Show toast notification using the hook
     if (calendarEvents.length > 0) {
       toast({
         title: "Google Calendar Sync",
@@ -179,12 +185,6 @@ export default function HomePage() {
 
   const currentData = selectedDate ? appData[format(selectedDate, 'yyyy-MM-dd')] : undefined;
   
-  // Add toast notification functionality
-  const toast = ({ title, description }: { title: string; description: string }) => {
-    console.log(`${title}: ${description}`);
-    // In a real app, we would use a toast notification library
-  };
-
   // Toggle edit mode
   const toggleEditMode = () => {
     setIsEditMode(!isEditMode);
@@ -196,6 +196,94 @@ export default function HomePage() {
       .sort(([, a], [, b]) => a.row - b.row)
       .map(([key]) => key as keyof LayoutPreferences);
   };
+
+  const handleSetFeaturedImage = useCallback(async (dateKey: string, newFeaturedUrl: string | undefined) => {
+    let finalPayloadForDB: Partial<DailyEntry> | null = null;
+    let dateObjectForDB: Date | null = null;
+
+    setAppData(prevAppData => {
+      const updatedAppData = { ...prevAppData };
+      // Ensure entry exists or create a basic one for appData
+      const dayData = updatedAppData[dateKey] ? { ...updatedAppData[dateKey] } : 
+        { notes: '', imageUrls: [], videoUrls: [], todos: [], importantEvents: '', googleCalendarEvents: [] };
+
+      dayData.featuredImageUrl = newFeaturedUrl;
+
+      // If setting a new featured image, ensure it's in the imageUrls array
+      if (newFeaturedUrl && !(dayData.imageUrls || []).includes(newFeaturedUrl)) {
+        dayData.imageUrls = [...(dayData.imageUrls || []), newFeaturedUrl];
+      }
+      
+      updatedAppData[dateKey] = dayData;
+
+      // Prepare payload for DB
+      dateObjectForDB = parse(dateKey, 'yyyy-MM-dd', new Date());
+      finalPayloadForDB = { // Assuming DailyEntry structure from services
+          notes: dayData.notes,
+          video_urls: dayData.videoUrls || [],
+          important_events: dayData.importantEvents || null,
+          featured_image_url: dayData.featuredImageUrl || null,
+          // todos and googleCalendarEvents are typically handled by their own services/tables
+      };
+      return updatedAppData;
+    });
+
+    if (user && user.id && finalPayloadForDB && dateObjectForDB) {
+      try {
+        await saveDailyEntry(dateObjectForDB, user.id, finalPayloadForDB);
+        toast({ title: "Featured Image Updated", description: "Change saved to database." });
+      } catch (error) {
+        console.error("Error saving featured image update to DB:", error);
+        toast({ title: "Database Error", description: "Could not save featured image change.", variant: "destructive" });
+      }
+    } else if (finalPayloadForDB) { // If payload exists but user doesn't, it's a local-only change
+        toast({ title: "Featured Image Updated (Locally)", description: "Sign in to save changes to the cloud."});
+    }
+  }, [setAppData, user, toast]);
+
+  const handleDeleteImageFromCalendar = useCallback(async (dateKey: string, imageUrlToRemove: string) => {
+    let finalPayloadForDB: Partial<DailyEntry> | null = null;
+    let dateObjectForDB: Date | null = null;
+
+    setAppData(prevAppData => {
+      const updatedAppData = { ...prevAppData };
+      if (!updatedAppData[dateKey]) {
+        // This case should ideally not happen if we are deleting an image that was displayed
+        console.warn("Attempting to delete image for a dateKey that doesn't exist in appData:", dateKey);
+        return prevAppData; 
+      }
+
+      const dayData = { ...updatedAppData[dateKey] };
+      dayData.imageUrls = dayData.imageUrls?.filter(url => url !== imageUrlToRemove) || [];
+
+      if (dayData.featuredImageUrl === imageUrlToRemove) {
+        dayData.featuredImageUrl = dayData.imageUrls.length > 0 ? dayData.imageUrls[0] : undefined;
+      }
+      updatedAppData[dateKey] = dayData;
+
+      // Prepare for DB
+      dateObjectForDB = parse(dateKey, 'yyyy-MM-dd', new Date());
+      finalPayloadForDB = { // Assuming DailyEntry structure from services
+          notes: dayData.notes,
+          video_urls: dayData.videoUrls || [],
+          important_events: dayData.importantEvents || null,
+          featured_image_url: dayData.featuredImageUrl || null,
+      };
+      return updatedAppData;
+    });
+    
+    if (user && user.id && finalPayloadForDB && dateObjectForDB) {
+      try {
+        await saveDailyEntry(dateObjectForDB, user.id, finalPayloadForDB);
+        toast({ title: "Image Deleted", description: "Change saved to database." });
+      } catch (error) {
+        console.error("Error saving image deletion to DB:", error);
+        toast({ title: "Database Error", description: "Could not save image deletion.", variant: "destructive" });
+      }
+    } else if (finalPayloadForDB) { // If payload exists but user doesn't, it's a local-only change
+        toast({ title: "Image Deleted (Locally)", description: "Sign in to save changes to the cloud."});
+    }
+  }, [setAppData, user, toast]);
 
   if (!isMounted) {
     return (
@@ -300,6 +388,8 @@ export default function HomePage() {
             selectedDate={selectedDate}
             onDateChange={handleDateChange}
             appData={appData}
+            onSetFeaturedImage={handleSetFeaturedImage}
+            onDeleteImage={handleDeleteImageFromCalendar}
           />
         </div>
         

@@ -16,13 +16,15 @@ interface ImportantEventsModuleProps {
   onImportantEventsChange: (events: string) => void;
   defaultOpen?: boolean;
   initialExpanded?: boolean;
+  isReadOnly?: boolean;
 }
 
 const ImportantEventsModule = ({ 
   importantEvents, 
   onImportantEventsChange,
   defaultOpen = true,
-  initialExpanded = false 
+  initialExpanded = false,
+  isReadOnly = false
 }: ImportantEventsModuleProps) => {
   const [isOpen, setIsOpen] = useState<boolean>(initialExpanded);
 
@@ -30,8 +32,8 @@ const ImportantEventsModule = ({
     <Collapsible open={isOpen} onOpenChange={setIsOpen} defaultOpen={defaultOpen} className="relative w-full bg-card rounded-md">
       <div className="flex items-center justify-between p-3 border-b border-border">
         <div className="flex items-center gap-2">
-          <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" />
-          <Label htmlFor="importantEvents" className="flex items-center gap-2 font-medium text-primary cursor-pointer">
+          {!isReadOnly && <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" />}
+          <Label htmlFor="importantEventsTrigger" className="flex items-center gap-2 font-medium text-primary cursor-pointer">
             <AlertTriangleIcon className="h-5 w-5" />
             Important Events
           </Label>
@@ -61,11 +63,15 @@ const ImportantEventsModule = ({
       <CollapsibleContent>
         <div className="p-3">
           <Textarea
-            id="importantEvents"
-            placeholder="e.g., Doctor's appointment at 3 PM, Project deadline"
+            id="importantEventsTrigger"
             value={importantEvents}
-            onChange={(e) => onImportantEventsChange(e.target.value)}
-            className="min-h-[80px] resize-none bg-input text-foreground placeholder-muted-foreground"
+            onChange={(e) => !isReadOnly && onImportantEventsChange(e.target.value)}
+            placeholder={isReadOnly 
+              ? "No important events noted for this day." 
+              : "Note any significant milestones, achievements, or events that happened today..."}
+            className="w-full min-h-[120px] resize-y rounded-md border border-input bg-transparent p-3 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={isReadOnly}
+            readOnly={isReadOnly}
           />
         </div>
       </CollapsibleContent>

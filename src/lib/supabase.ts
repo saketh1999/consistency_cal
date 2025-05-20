@@ -47,4 +47,29 @@ export type QuoteEntry = {
   date: string; // Format: YYYY-MM-DD
   created_at: string;
   updated_at: string;
+};
+
+// New types for videos and tags
+export type Video = {
+  id: string;
+  user_id: string;
+  daily_entry_id: string | null;
+  url: string;
+  title: string | null;
+  description: string | null;
+  created_at: string;
+};
+
+export type Tag = {
+  id: string;
+  user_id: string;
+  name: string;
+  created_at: string;
+};
+
+export type VideoTag = {
+  id: string;
+  video_id: string;
+  tag_id: string;
+  created_at: string;
 }; 

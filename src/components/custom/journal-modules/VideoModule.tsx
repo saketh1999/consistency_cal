@@ -4,15 +4,16 @@ import { useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { VideoIcon, GripVertical, Trash2Icon, PlusCircleIcon, XCircleIcon } from 'lucide-react';
-import { 
+import { VideoIcon, GripVertical, PlusCircleIcon, XCircleIcon } from 'lucide-react';
+import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import YoutubeEmbed from '../YoutubeEmbed';
+import TagInput from '../TagInput';
+import { saveVideo, createTag, addTagToVideo } from '@/lib/services/videoService';
 
 interface VideoModuleProps {
   videoUrls: string[];
@@ -20,6 +21,9 @@ interface VideoModuleProps {
   defaultOpen?: boolean;
   initialExpanded?: boolean;
   isReadOnly?: boolean;
+  selectedDate?: Date;
+  userId?: string;
+  dailyEntryId?: string;
 }
 
 const VideoModule = ({ 
@@ -27,13 +31,19 @@ const VideoModule = ({
   onVideoUrlsChange,
   defaultOpen = true,
   initialExpanded = false,
-  isReadOnly = false
+  isReadOnly = false,
+  selectedDate,
+  userId,
+  dailyEntryId
 }: VideoModuleProps) => {
   const [isOpen, setIsOpen] = useState<boolean>(initialExpanded);
   const [videoUrl, setVideoUrl] = useState<string>('');
+  const [videoTags, setVideoTags] = useState<string[]>([]);
+  const [title, setTitle] = useState<string>('');
+  const [description, setDescription] = useState<string>('');
   const { toast } = useToast();
 
-  const handleAddVideo = () => {
+  const handleAddVideo = async () => {
     if (isReadOnly) return;
     
     try {
@@ -66,10 +76,43 @@ const VideoModule = ({
         return;
       }
       
+      // Add to the daily entry's video URLs
       onVideoUrlsChange([...videoUrls, embedUrl]);
-      setVideoUrl('');
       
-      toast({ title: "Success", description: "Video added successfully" });
+      // If user ID is provided, also save to the videos table with tags
+      if (userId) {
+        const savedVideo = await saveVideo(
+          userId,
+          embedUrl,
+          dailyEntryId,
+          title || null,
+          description || null
+        );
+        
+        if (savedVideo) {
+          // Add tags if any are provided
+          for (const tagName of videoTags) {
+            const tag = await createTag(userId, tagName);
+            if (tag) {
+              await addTagToVideo(savedVideo.id, tag.id);
+            }
+          }
+          
+          toast({ 
+            title: "Success", 
+            description: "Video added with tags successfully" 
+          });
+        }
+      } else {
+        toast({ title: "Success", description: "Video added successfully" });
+      }
+      
+      // Reset form
+      setVideoUrl('');
+      setVideoTags([]);
+      setTitle('');
+      setDescription('');
+      
     } catch (error) {
       toast({ title: "Error", description: "Failed to process YouTube URL", variant: "destructive" });
     }
@@ -119,20 +162,51 @@ const VideoModule = ({
       <CollapsibleContent>
         <div className="p-3 space-y-3">
           {!isReadOnly && (
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-              <Input 
-                placeholder="Paste YouTube URL here" 
-                value={videoUrl}
-                onChange={(e) => setVideoUrl(e.target.value)}
-                className="flex-grow"
-              />
-              <Button 
-                variant="outline" 
-                className="whitespace-nowrap border-primary text-primary hover:bg-primary/10"
-                onClick={handleAddVideo}
-              >
-                <PlusCircleIcon className="mr-2 h-4 w-4" /> Add Video
-              </Button>
+            <div className="space-y-3">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                <Input 
+                  placeholder="Paste YouTube URL here" 
+                  value={videoUrl}
+                  onChange={(e) => setVideoUrl(e.target.value)}
+                  className="flex-grow"
+                />
+                <Button 
+                  variant="outline" 
+                  className="whitespace-nowrap border-primary text-primary hover:bg-primary/10"
+                  onClick={handleAddVideo}
+                >
+                  <PlusCircleIcon className="mr-2 h-4 w-4" /> Add Video
+                </Button>
+              </div>
+              
+              {userId && (
+                <>
+                  <Input
+                    placeholder="Video title (optional)"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className="w-full"
+                  />
+                  
+                  <Input
+                    placeholder="Description (optional)"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="w-full"
+                  />
+                  
+                  <div className="space-y-1">
+                    <Label htmlFor="videoTags" className="text-sm font-medium">
+                      Tags
+                    </Label>
+                    <TagInput 
+                      tags={videoTags} 
+                      onTagsChange={setVideoTags}
+                      placeholder="Add tags (optional)"
+                    />
+                  </div>
+                </>
+              )}
             </div>
           )}
           
@@ -144,7 +218,7 @@ const VideoModule = ({
                   : "Add YouTube videos to display them here."}
               </p>
             </div>
-          ) : (
+          ) :
             <div className="space-y-4">
               {videoUrls.map((url, index) => (
                 <div key={index} className="relative rounded-md border border-border overflow-hidden bg-black">
@@ -172,7 +246,7 @@ const VideoModule = ({
                 </div>
               ))}
             </div>
-          )}
+          }
         </div>
       </CollapsibleContent>
     </Collapsible>

@@ -342,6 +342,9 @@ const DailyContentView: React.FC<DailyContentViewProps> = ({ selectedDate, data:
                             defaultOpen={module.defaultOpen}
                             initialExpanded={module.initialExpanded}
                             isReadOnly={isReadOnly}
+                            selectedDate={selectedDate}
+                            userId={user?.id}
+                            dailyEntryId={dailyEntry?.id}
                           />
                         )}
                         

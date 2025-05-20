@@ -47,6 +47,17 @@ export function NavBar() {
           >
             Tasks
           </a>
+          <a 
+            href="/videos" 
+            className={cn(
+              "text-sm font-medium",
+              pathname === "/videos" 
+                ? "text-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            Videos
+          </a>
           
           {isLoading ? (
             <div className="h-9 w-20 bg-muted animate-pulse rounded-md"></div>
